@@ -1,22 +1,25 @@
 import Head from "next/head";
+import dynamic from "next/dynamic";
+import Footer from "@/components/layout/Footer";
 
-/**
- * Página principal — conteúdo em construção.
- * Seções serão implementadas na Phase 1 e Phase 2 do redesign.
- */
+// SSR desabilitado — Header usa useRouter (client-only hook)
+const Header = dynamic(() => import("@/components/layout/Header"), { ssr: false });
+
 export default function Home() {
   return (
     <>
       <Head>
-        <title>Amanda Boaviagem | Escritora da esperança</title>
+        <title>Amanda Boaviagem | Escritora da Esperança</title>
         <meta
           name="description"
           content="Site oficial de Amanda Boaviagem, escritora da esperança."
         />
       </Head>
-      <main className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <p className="font-serif text-2xl">Site em atualização</p>
+      <Header />
+      <main className="min-h-screen bg-background text-foreground pt-16">
+        {/* Seções serão adicionadas na Phase 2 */}
       </main>
+      <Footer />
     </>
   );
 }
