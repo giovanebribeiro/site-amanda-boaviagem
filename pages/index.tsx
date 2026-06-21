@@ -1,6 +1,10 @@
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import Footer from "@/components/layout/Footer";
+import About from "@/components/sections/About";
+import Books from "@/components/sections/Books";
+import Contact from "@/components/sections/Contact";
+import Hero from "@/components/sections/Hero";
 
 // SSR desabilitado — Header usa useRouter (client-only hook)
 const Header = dynamic(() => import("@/components/layout/Header"), { ssr: false });
@@ -16,8 +20,11 @@ export default function Home() {
         />
       </Head>
       <Header />
-      <main className="min-h-screen bg-background text-foreground pt-16">
-        {/* Seções serão adicionadas na Phase 2 */}
+      <main className="bg-background text-foreground">
+        <Hero id="inicio" />
+        <About id="sobre" />
+        <Books id="livros" />
+        <Contact id="contato" />
       </main>
       <Footer />
     </>
