@@ -8,6 +8,11 @@ import Hero from "@/components/sections/Hero";
 
 // SSR desabilitado — Header usa useRouter (client-only hook)
 const Header = dynamic(() => import("@/components/layout/Header"), { ssr: false });
+// SSR desabilitado — UltimoLancamento contém Countdown com useEffect/useState
+const UltimoLancamento = dynamic(
+  () => import("@/components/sections/UltimoLancamento"),
+  { ssr: false }
+);
 
 export default function Home() {
   return (
@@ -22,8 +27,9 @@ export default function Home() {
       <Header />
       <main className="bg-background text-foreground">
         <Hero id="inicio" />
-        <About id="sobre" />
+        <UltimoLancamento />
         <Books id="livros" />
+        <About id="sobre" />
         <Contact id="contato" />
       </main>
       <Footer />

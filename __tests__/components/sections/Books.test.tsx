@@ -19,11 +19,20 @@ describe("Books", () => {
     expect(screen.getByText(/livros/i)).toBeInTheDocument();
   });
 
-  it("renders all book cards from DataStore", () => {
+  it("renders cover links pointing to /livros/ pages", () => {
     render(<Books id="livros" />);
-    // DataStore has 4 items
-    const amazonLinks = screen.getAllByRole("link", { name: /amazon/i });
-    expect(amazonLinks.length).toBeGreaterThan(0);
+    const coverLinks = screen
+      .getAllByRole("link")
+      .filter((l) => l.getAttribute("href")?.startsWith("/livros/"));
+    expect(coverLinks.length).toBeGreaterThan(0);
+  });
+
+  it("renders all books from DataStore (4 items)", () => {
+    render(<Books id="livros" />);
+    const coverLinks = screen
+      .getAllByRole("link")
+      .filter((l) => l.getAttribute("href")?.startsWith("/livros/"));
+    expect(coverLinks.length).toBe(4);
   });
 
   it("renders with the given id attribute", () => {

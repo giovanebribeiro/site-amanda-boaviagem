@@ -1,11 +1,20 @@
+export interface Review {
+  author: string;
+  text: string;
+}
+
 export interface Book {
   id: number;
+  slug: string;
   title: string;
   description: string;
   image: string;
   linkAmazon: string;
   linkUiclap: string;
   direction: "left" | "right";
+  releaseDate: string;
+  slogan: string;
+  reviews: Review[];
 }
 
 export interface BannerItem {

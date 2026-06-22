@@ -1,12 +1,12 @@
-import BookCard from "@/components/ui/BookCard";
-import DataStore from "@/public/data/DataStore";
+import BookCover from "@/components/ui/BookCover";
+import { getBooksSortedByDate } from "@/lib/books";
 
 interface BooksProps {
   id: string;
 }
 
 export default function Books({ id }: BooksProps) {
-  const { items } = DataStore;
+  const books = getBooksSortedByDate();
 
   return (
     <section id={id} className="py-24 px-4 bg-background">
@@ -15,12 +15,12 @@ export default function Books({ id }: BooksProps) {
           Livros
         </h2>
         <p className="font-sans text-center text-foreground/60 mb-16 max-w-xl mx-auto">
-          Conheça as obras de Amanda Boaviagem e encontre sua próxima leitura.
+          Clique na capa para conhecer cada obra de Amanda Boaviagem.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {items.map((book) => (
-            <BookCard key={book.id} book={book} />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+          {books.map((book) => (
+            <BookCover key={book.id} book={book} />
           ))}
         </div>
       </div>
