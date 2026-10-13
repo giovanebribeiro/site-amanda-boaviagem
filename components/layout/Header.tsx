@@ -41,7 +41,7 @@ export default function Header() {
       isBordered
       isBlurred
       maxWidth="xl"
-      className="bg-background/95 backdrop-blur-sm"
+      className="bg-background/95 backdrop-blur-xs"
       role="navigation"
     >
       {/* Logo — esquerda */}
@@ -68,7 +68,7 @@ export default function Header() {
           <NavbarItem key={link.href} isActive={isActive(link.href)}>
             <Link
               href={link.href}
-              className={`text-sm font-sans px-2 py-1 rounded transition-colors ${
+              className={`text-sm font-sans px-2 py-1 rounded-sm transition-colors ${
                 isActive(link.href)
                   ? "text-primary font-medium"
                   : "text-foreground/70 hover:text-foreground"
