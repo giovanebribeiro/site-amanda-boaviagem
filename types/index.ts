@@ -35,3 +35,10 @@ export interface ContactData {
   instagramUrl: string;
   email: string;
 }
+
+export interface AboutData {
+  title: string;
+  body: string;
+  body2: string;
+  image: string;
+}

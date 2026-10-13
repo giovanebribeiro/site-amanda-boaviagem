@@ -7,14 +7,17 @@ import Footer from "@/components/layout/Footer";
 import ReviewCard from "@/components/ui/ReviewCard";
 import Countdown from "@/components/ui/Countdown";
 import { getBooksSortedByDate, getBookBySlug } from "@/lib/books";
-import type { Book } from "@/types";
+import { getContactData } from "@/lib/contact";
+import type { Book, ContactData } from "@/types";
 
 interface BookPageProps {
   book: Book;
+  contact: ContactData;
 }
 
 export default function BookPage({
   book,
+  contact,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   return (
     <>
@@ -95,7 +98,7 @@ export default function BookPage({
         </article>
       </main>
 
-      <Footer />
+      <Footer contact={contact} />
     </>
   );
 }
@@ -116,5 +119,5 @@ export const getStaticProps: GetStaticProps<BookPageProps> = async ({
     return { notFound: true };
   }
 
-  return { props: { book } };
+  return { props: { book, contact: getContactData() } };
 };

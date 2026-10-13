@@ -1,12 +1,13 @@
 import Image from "next/image";
-import DataAbout from "@/public/data/DataAbout";
+import type { AboutData } from "@/types";
 
 interface AboutProps {
   id: string;
+  about: AboutData;
 }
 
-export default function About({ id }: AboutProps) {
-  const { title, body, body2, image } = DataAbout;
+export default function About({ id, about }: AboutProps) {
+  const { title, body, body2, image } = about;
 
   return (
     <section

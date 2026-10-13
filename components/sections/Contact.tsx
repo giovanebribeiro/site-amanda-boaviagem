@@ -1,13 +1,14 @@
 import { FiInstagram } from "@react-icons/all-files/fi/FiInstagram";
 import { FiMail } from "@react-icons/all-files/fi/FiMail";
-import DataContact from "@/public/data/DataContact";
+import type { ContactData } from "@/types";
 
 interface ContactProps {
   id: string;
+  contact: ContactData;
 }
 
-export default function Contact({ id }: ContactProps) {
-  const { instagram, instagramUrl, email } = DataContact;
+export default function Contact({ id, contact }: ContactProps) {
+  const { instagram, instagramUrl, email } = contact;
 
   return (
     <section

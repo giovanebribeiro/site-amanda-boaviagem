@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FiInstagram } from "@react-icons/all-files/fi/FiInstagram";
 import { FiMail } from "@react-icons/all-files/fi/FiMail";
-import DataContact from "@/public/data/DataContact";
+import type { ContactData } from "@/types";
 
 interface NavLink {
   label: string;
@@ -16,7 +16,11 @@ const NAV_LINKS: NavLink[] = [
   { label: "Contato", href: "/#contato" },
 ];
 
-export default function Footer() {
+interface FooterProps {
+  contact: ContactData;
+}
+
+export default function Footer({ contact }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -55,22 +59,22 @@ export default function Footer() {
               Contato
             </h3>
             <a
-              href={DataContact.instagramUrl}
+              href={contact.instagramUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
               className="flex items-center gap-2 text-sm font-sans text-foreground/70 hover:text-foreground transition-colors"
             >
               <FiInstagram size={16} />
-              {DataContact.instagram}
+              {contact.instagram}
             </a>
             <a
-              href={`mailto:${DataContact.email}`}
+              href={`mailto:${contact.email}`}
               aria-label="E-mail"
               className="flex items-center gap-2 text-sm font-sans text-foreground/70 hover:text-foreground transition-colors"
             >
               <FiMail size={16} />
-              {DataContact.email}
+              {contact.email}
             </a>
           </div>
         </div>

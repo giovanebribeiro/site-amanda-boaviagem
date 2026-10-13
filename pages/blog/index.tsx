@@ -5,14 +5,17 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import PostCard from "@/components/blog/PostCard";
 import { getAllPosts } from "@/lib/blog";
-import type { BlogPost } from "@/types";
+import { getContactData } from "@/lib/contact";
+import type { BlogPost, ContactData } from "@/types";
 
 interface BlogIndexProps {
   posts: BlogPost[];
+  contact: ContactData;
 }
 
 export default function BlogIndex({
   posts,
+  contact,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   return (
     <>
@@ -64,12 +67,12 @@ export default function BlogIndex({
         </div>
       </main>
 
-      <Footer />
+      <Footer contact={contact} />
     </>
   );
 }
 
 export const getStaticProps: GetStaticProps<BlogIndexProps> = async () => {
   const posts = getAllPosts();
-  return { props: { posts } };
+  return { props: { posts, contact: getContactData() } };
 };

@@ -4,6 +4,19 @@
  */
 import { render } from "@testing-library/react";
 import Home, { getStaticProps } from "@/pages/index";
+import type { AboutData, ContactData } from "@/types";
+
+const about: AboutData = {
+  title: "Sobre mim",
+  body: "Texto.",
+  body2: "Mais texto.",
+  image: "/images/session02/amanda.jpeg",
+};
+const contact: ContactData = {
+  instagram: "@pagina90_",
+  instagramUrl: "https://www.instagram.com/pagina90_/",
+  email: "amandaboaviagem@gmail.com",
+};
 
 // Mock next/dynamic to avoid SSR issues in tests
 jest.mock("next/dynamic", () => (fn: () => Promise<unknown>) => {
@@ -18,7 +31,7 @@ jest.mock("next/router", () => ({
 
 describe("Home page", () => {
   it("renders without crashing", () => {
-    const { container } = render(<Home books={[]} />);
+    const { container } = render(<Home books={[]} about={about} contact={contact} />);
     expect(container).toBeInTheDocument();
   });
 
@@ -28,5 +41,12 @@ describe("Home page", () => {
     const { books } = (result as { props: { books: { releaseDate: string }[] } }).props;
     expect(books).toHaveLength(4);
     expect(books[0].releaseDate >= books[1].releaseDate).toBe(true);
+  });
+
+  it("getStaticProps provides about and contact from the content folder", async () => {
+    const result = await getStaticProps({});
+    const { props } = result as { props: { about: AboutData; contact: ContactData } };
+    expect(props.about.title).toBe("Sobre mim");
+    expect(props.contact.email).toBe("amandaboaviagem@gmail.com");
   });
 });

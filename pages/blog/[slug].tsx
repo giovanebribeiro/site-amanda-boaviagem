@@ -6,11 +6,13 @@ import { serialize } from "next-mdx-remote/serialize";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { getAllPosts, getPostBySlug } from "@/lib/blog";
-import type { BlogPost } from "@/types";
+import { getContactData } from "@/lib/contact";
+import type { BlogPost, ContactData } from "@/types";
 
 interface PostPageProps {
   post: BlogPost;
   mdxSource: MDXRemoteSerializeResult;
+  contact: ContactData;
 }
 
 function formatDate(dateStr: string): string {
@@ -25,6 +27,7 @@ function formatDate(dateStr: string): string {
 export default function PostPage({
   post,
   mdxSource,
+  contact,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   return (
     <>
@@ -70,7 +73,7 @@ export default function PostPage({
         </article>
       </main>
 
-      <Footer />
+      <Footer contact={contact} />
     </>
   );
 }
@@ -103,6 +106,7 @@ export const getStaticProps: GetStaticProps<PostPageProps> = async ({
         ...(post.coverImage ? { coverImage: post.coverImage } : {}),
       },
       mdxSource,
+      contact: getContactData(),
     },
   };
 };

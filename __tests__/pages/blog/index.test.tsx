@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import BlogIndex, { getStaticProps } from "@/pages/blog/index";
-import type { BlogPost } from "@/types";
+import type { BlogPost, ContactData } from "@/types";
 
 jest.mock("next/router", () => ({
   useRouter: () => ({ pathname: "/blog", push: jest.fn() }),
@@ -24,6 +24,12 @@ jest.mock("@heroui/react", () => ({
   ),
 }));
 
+const contact: ContactData = {
+  instagram: "@pagina90_",
+  instagramUrl: "https://www.instagram.com/pagina90_/",
+  email: "amandaboaviagem@gmail.com",
+};
+
 const mockPosts: BlogPost[] = [
   {
     slug: "primeiro-post",
@@ -35,21 +41,21 @@ const mockPosts: BlogPost[] = [
 
 describe("BlogIndex page", () => {
   it("renders without crashing", () => {
-    render(<BlogIndex posts={mockPosts} />);
+    render(<BlogIndex posts={mockPosts} contact={contact} />);
   });
 
   it("renders page title", () => {
-    render(<BlogIndex posts={mockPosts} />);
+    render(<BlogIndex posts={mockPosts} contact={contact} />);
     expect(screen.getByRole("heading", { name: /blog/i })).toBeInTheDocument();
   });
 
   it("renders each post card with title", () => {
-    render(<BlogIndex posts={mockPosts} />);
+    render(<BlogIndex posts={mockPosts} contact={contact} />);
     expect(screen.getAllByText("Meu primeiro post").length).toBeGreaterThan(0);
   });
 
   it("renders each post card with excerpt", () => {
-    render(<BlogIndex posts={mockPosts} />);
+    render(<BlogIndex posts={mockPosts} contact={contact} />);
     expect(screen.getByText("Breve descricao do post.")).toBeInTheDocument();
   });
 
@@ -60,5 +66,11 @@ describe("BlogIndex page", () => {
     expect(
       Array.isArray((result as { props: { posts: BlogPost[] } }).props.posts)
     ).toBe(true);
+  });
+
+  it("getStaticProps provides the contact data for the footer", async () => {
+    const result = await getStaticProps({});
+    const { props } = result as { props: { contact: ContactData } };
+    expect(props.contact.email).toBe("amandaboaviagem@gmail.com");
   });
 });
