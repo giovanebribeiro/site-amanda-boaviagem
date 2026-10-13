@@ -1,10 +1,13 @@
 import Head from "next/head";
+import type { GetStaticProps } from "next";
 import dynamic from "next/dynamic";
 import Footer from "@/components/layout/Footer";
 import About from "@/components/sections/About";
 import Books from "@/components/sections/Books";
 import Contact from "@/components/sections/Contact";
 import Hero from "@/components/sections/Hero";
+import { getBooksSortedByDate } from "@/lib/books";
+import type { Book } from "@/types";
 
 // SSR desabilitado — Header usa useRouter (client-only hook)
 const Header = dynamic(() => import("@/components/layout/Header"), { ssr: false });
@@ -14,7 +17,15 @@ const UltimoLancamento = dynamic(
   { ssr: false }
 );
 
-export default function Home() {
+interface HomeProps {
+  books: Book[];
+}
+
+export const getStaticProps: GetStaticProps<HomeProps> = async () => ({
+  props: { books: getBooksSortedByDate() },
+});
+
+export default function Home({ books }: HomeProps) {
   return (
     <>
       <Head>
@@ -27,8 +38,8 @@ export default function Home() {
       <Header />
       <main className="bg-background text-foreground">
         <Hero id="inicio" />
-        <UltimoLancamento />
-        <Books id="livros" />
+        <UltimoLancamento book={books[0] ?? null} />
+        <Books id="livros" books={books} />
         <About id="sobre" />
         <Contact id="contato" />
       </main>

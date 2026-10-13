@@ -52,7 +52,7 @@ const mockBook: Book = {
   slug: "amor-nos-tempos-de-quarentena-2a-ed",
   title: "Amor nos Tempos de Quarentena - Amanda Boaviagem (2a Ed.)",
   description: "Amor e Morte andam lado a lado.",
-  image: "/images/session03/book1.png",
+  image: "/images/books/book1.png",
   links: [
     { label: "Amazon", url: "https://amazon.com/test" },
     { label: "Uiclap", url: "https://uiclap.com/test" },

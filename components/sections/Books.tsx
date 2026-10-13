@@ -1,13 +1,12 @@
 import BookCover from "@/components/ui/BookCover";
-import { getBooksSortedByDate } from "@/lib/books";
+import type { Book } from "@/types";
 
 interface BooksProps {
   id: string;
+  books: Book[];
 }
 
-export default function Books({ id }: BooksProps) {
-  const books = getBooksSortedByDate();
-
+export default function Books({ id, books }: BooksProps) {
   return (
     <section id={id} className="py-24 px-4 bg-background">
       <div className="max-w-6xl mx-auto">

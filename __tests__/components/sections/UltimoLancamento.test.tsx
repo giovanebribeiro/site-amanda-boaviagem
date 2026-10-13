@@ -1,5 +1,6 @@
 import { render, screen, act } from "@testing-library/react";
 import UltimoLancamento from "@/components/sections/UltimoLancamento";
+import type { Book } from "@/types";
 
 jest.mock("next/image", () => ({
   __esModule: true,
@@ -9,18 +10,30 @@ jest.mock("next/image", () => ({
   ),
 }));
 
+const book: Book = {
+  id: 4,
+  slug: "amor-nos-tempos-de-quarentena-2a-ed",
+  title: "Amor nos Tempos de Quarentena - Amanda Boaviagem (2a Ed.)",
+  description: "Amor e Morte andam lado a lado.",
+  image: "/images/books/book1.png",
+  links: [{ label: "Uiclap", url: "https://uiclap.example/x" }],
+  direction: "right",
+  releaseDate: "2022-06-01",
+  slogan: "A edição definitiva de um romance que emocionou o Brasil.",
+  reviews: [],
+};
+
 describe("UltimoLancamento", () => {
   it("renders without crashing", async () => {
     await act(async () => {
-      render(<UltimoLancamento />);
+      render(<UltimoLancamento book={book} />);
     });
   });
 
-  it("renders the latest book title", async () => {
+  it("renders the title of the book received by props", async () => {
     await act(async () => {
-      render(<UltimoLancamento />);
+      render(<UltimoLancamento book={book} />);
     });
-    // The latest book by releaseDate is id=4 (2022-06-01)
     expect(
       screen.getByText(/amor nos tempos de quarentena.*2a ed/i)
     ).toBeInTheDocument();
@@ -28,7 +41,7 @@ describe("UltimoLancamento", () => {
 
   it("renders the slogan of the latest book", async () => {
     await act(async () => {
-      render(<UltimoLancamento />);
+      render(<UltimoLancamento book={book} />);
     });
     expect(
       screen.getByText(/edição definitiva/i)
@@ -37,15 +50,23 @@ describe("UltimoLancamento", () => {
 
   it("renders the description of the latest book", async () => {
     await act(async () => {
-      render(<UltimoLancamento />);
+      render(<UltimoLancamento book={book} />);
     });
     expect(screen.getByText(/amor e morte andam lado a lado/i)).toBeInTheDocument();
   });
 
   it("renders the cover image", async () => {
     await act(async () => {
-      render(<UltimoLancamento />);
+      render(<UltimoLancamento book={book} />);
     });
     expect(screen.getByRole("img")).toBeInTheDocument();
+  });
+
+  it("renders nothing when there is no book", async () => {
+    let container!: HTMLElement;
+    await act(async () => {
+      ({ container } = render(<UltimoLancamento book={null} />));
+    });
+    expect(container).toBeEmptyDOMElement();
   });
 });

@@ -1,11 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import Countdown from "@/components/ui/Countdown";
-import { getLatestBook } from "@/lib/books";
+import type { Book } from "@/types";
 
-export default function UltimoLancamento() {
-  const book = getLatestBook();
+interface UltimoLancamentoProps {
+  book: Book | null;
+}
 
+export default function UltimoLancamento({ book }: UltimoLancamentoProps) {
   if (!book) return null;
 
   return (
