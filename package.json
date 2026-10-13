@@ -4,7 +4,8 @@
   "scripts": {
     "prepare": "husky install",
     "dev": "npm run prebuild && next dev",
-    "prebuild": "next lint",
+    "lint": "next lint",
+    "prebuild": "npm run lint",
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "app": "npm run build",
