@@ -7,7 +7,7 @@ Projeto referente ao site da escritora Amanda Boaviagem.
 
 * Node.JS 16+
 * React 18
-* Next JS 13+
+* Next JS 14+
 
 Após o clone do projeto, instalar as dependências:
 
@@ -36,47 +36,42 @@ $ npm run release
 
 ## Gerenciamento de conteúdo
 
-Todo o conteúdo do site se apresenta de forma estática no diretório public/data. Todos os arquivos presentes nesta pasta possuem a mesma estrutura:
-
-```javascript
-
-const Data = {
-    items: [
-        {
-            "id": 1,
-            "title": "Lorem Ipsum",
-            "foo": "bar"
-        }
-    ]
-}
+Todo o conteúdo editável fica na pasta `content/`. A pasta `public/` guarda apenas imagens.
 
 ```
-
-Cada arquivo de data pode possuir atributos específicos. Consultar cada arquivo para mais informações sobre a estrutura de dados. 
-
-Tomemos como exemplo o arquivo que armazena os dados da loja (DataStore). Para adicionar novas entradas na loja basta acessar o arquivo public/data/DataStore e incluir um novo objeto conforme o template abaixo. Caso o arquivo possua apenas dois itens, nao sera habilitada a opcao de "ver mais" que leva para a pagina exclusiva da loja.
-
-```javascript
-
-const DataStore = {
-    items: [
-
-        ...
-
-        {
-            "id": 4,
-            "title": "Amor nos Tempos de Quarentena - Amanda Boaviagem",
-            "description": "Amor e Morte andam lado a lado. O dia a dia da jovem médica Manuela no hospital em que trabalha em tempos de pandemia do Covid19. Flashes de um passado não tão distante mas feliz, a lua de mel dela e Pedro na Riviera Maya, nas cálidas águas do Caribe. O medo e a insegurança que sente ao ter de encarar a pandemia sozinha. O marido preso em outro país sem poder voltar ao Brasil. Amizades, sonhos, descobertas. Uma luz em sua vida quando tudo parecia perdido. Um antídoto para a pandemia? Acompanhe Manuela nesses tempos difusos (e confusos) em que a verdade é desmentida e o que era solução se torna problema. Sua sanidade mental está sendo posta à prova a todo o momento nessa pandemia? Manuela está pronta pro jogo e disposta a arriscar tudo. E você? O que você seria capaz de fazer por amor?",
-            "image": "/images/session03/book1.png",
-            "linkAmazon": "https://www.amazon.com.br/gp/product/B095L64BDN/ref=as_li_tl?ie=UTF8&camp=1789&creative=9325&creativeASIN=B095L64BDN&linkCode=as2&tag=amandaboaviag-20&linkId=6c8777f4c063d10938dc2ffcbe3883d5",
-            "linkUiclap": "https://loja.uiclap.com/titulo/ua8461/",
-            "direction": "right"
-        }
-    ]
-}
-
+content/
+  books/<slug>.md   um livro por arquivo (o nome do arquivo vira a URL /livros/<slug>)
+  about.json        seção "Sobre"
+  contact.json      Instagram e e-mail
+  blog/             posts em MDX
 ```
 
-De forma análoga, para adicionar novo banner deve ser alterado o arquivo DataIntro adicionando uma entrada no objeto bannersDesktop e outra no objeto bannersMobile com a imagem do tamanho certo para mobile. Para um novo depoimento, deve ser alterado o arquivo DataTestimonials adicionando uma nova entrada no objeto Images e ImagesMobile com o endereço equivalente para a imagem desktop e para a imagem mobile.
+### Adicionar um livro
 
-**OBS:** Para criar a imagem do tamanho mobile deve-se acessar o canva e cortar a imagem no tamanho para post do instagram. Extensão preferencial de qualquer imagem: *SVG*
+1. Coloque a capa em `public/images/books/`.
+2. Crie `content/books/<slug>.md`. O cabeçalho (frontmatter) guarda os dados curtos e o corpo do arquivo é a sinopse:
+
+```md
+---
+title: "Título do livro"
+releaseDate: "2021-05-01"
+slogan: "Frase de destaque"
+image: "/images/books/capa.png"
+links:
+  - { label: "Amazon", url: "https://...", primary: true }
+  - { label: "Uiclap", url: "https://..." }
+---
+Texto da sinopse, em texto corrido.
+```
+
+- Obrigatórios: `title`, `releaseDate` (sempre entre aspas, `AAAA-MM-DD`) e `image`.
+- Opcionais: `slogan`, `links` (lista de `label` e `url`, quantos forem necessários) e `reviews` (lista de `author` e `text`).
+- `id` e o lado da capa na lista são calculados automaticamente.
+- Uma 2ª edição é um livro separado, que pode reutilizar a mesma imagem de capa.
+- Se um arquivo estiver com campo obrigatório faltando ou inválido, o build falha com uma mensagem indicando o arquivo e o campo.
+
+### Sobre e Contato
+
+Edite `content/about.json` (`title`, `body`, `body2`, `image`) e `content/contact.json` (`instagram`, `instagramUrl`, `email`).
+
+**OBS:** Extensão preferencial de qualquer imagem: *SVG*.
