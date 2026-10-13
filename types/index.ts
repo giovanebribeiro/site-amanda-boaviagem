@@ -1,23 +1,25 @@
+export interface Review {
+  author: string;
+  text: string;
+}
+
+export interface BookLink {
+  label: string;
+  url: string;
+  primary?: boolean;
+}
+
 export interface Book {
   id: number;
+  slug: string;
   title: string;
   description: string;
   image: string;
-  linkAmazon: string;
-  linkUiclap: string;
+  links: BookLink[];
   direction: "left" | "right";
-}
-
-export interface BannerItem {
-  id: number;
-  title: string;
-  src: string;
-}
-
-export interface TestimonialItem {
-  id: number;
-  title: string;
-  src: string;
+  releaseDate: string;
+  slogan: string;
+  reviews: Review[];
 }
 
 export interface BlogPost {
@@ -32,4 +34,11 @@ export interface ContactData {
   instagram: string;
   instagramUrl: string;
   email: string;
+}
+
+export interface AboutData {
+  title: string;
+  body: string;
+  body2: string;
+  image: string;
 }
