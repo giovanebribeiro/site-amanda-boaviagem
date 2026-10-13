@@ -66,3 +66,32 @@ describe("books helpers", () => {
     });
   });
 });
+
+describe("books data — purchase links", () => {
+  it("exposes links as { label, url } lists and no legacy store fields", () => {
+    for (const book of getBooksSortedByDate()) {
+      expect(Array.isArray(book.links)).toBe(true);
+      for (const link of book.links) {
+        expect(link.label).toBeTruthy();
+        expect(link.url).toMatch(/^https?:\/\//);
+      }
+      expect(book).not.toHaveProperty("linkAmazon");
+      expect(book).not.toHaveProperty("linkUiclap");
+    }
+  });
+
+  it("marks Amazon as primary and Uiclap as secondary, as styled before", () => {
+    for (const book of getBooksSortedByDate()) {
+      for (const link of book.links) {
+        expect(Boolean(link.primary)).toBe(link.label === "Amazon");
+      }
+    }
+  });
+
+  it("keeps Amazon only on the books that had it before", () => {
+    const labels = (slug: string) =>
+      getBookBySlug(slug)?.links.map((l) => l.label);
+    expect(labels("amor-nos-tempos-de-quarentena")).toEqual(["Amazon", "Uiclap"]);
+    expect(labels("contronicas-historias-amorfas-de-quarentena")).toEqual(["Uiclap"]);
+  });
+});

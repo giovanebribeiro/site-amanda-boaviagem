@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { BookLink } from "@/types";
 
 interface TimeLeft {
   weeks: number;
@@ -10,8 +11,7 @@ interface TimeLeft {
 
 interface CountdownProps {
   releaseDate: string;
-  linkAmazon: string;
-  linkUiclap: string;
+  links?: BookLink[];
 }
 
 function computeTimeLeft(diffMs: number): TimeLeft {
@@ -33,8 +33,7 @@ function pad(n: number): string {
 
 export default function Countdown({
   releaseDate,
-  linkAmazon,
-  linkUiclap,
+  links = [],
 }: CountdownProps) {
   const [mounted, setMounted] = useState(false);
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
@@ -65,26 +64,21 @@ export default function Countdown({
   if (timeLeft === null) {
     return (
       <div className="flex flex-wrap gap-4">
-        {linkAmazon && (
+        {links.map(({ label, url, primary }) => (
           <a
-            href={linkAmazon}
+            key={`${label}-${url}`}
+            href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-sans font-medium px-8 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+            className={
+              primary
+                ? "font-sans font-medium px-8 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                : "font-sans font-medium px-8 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
+            }
           >
-            Amazon
+            {label}
           </a>
-        )}
-        {linkUiclap && (
-          <a
-            href={linkUiclap}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-sans font-medium px-8 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
-          >
-            Uiclap
-          </a>
-        )}
+        ))}
       </div>
     );
   }

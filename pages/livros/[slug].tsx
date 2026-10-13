@@ -54,8 +54,7 @@ export default function BookPage({
 
               <Countdown
                 releaseDate={book.releaseDate}
-                linkAmazon={book.linkAmazon}
-                linkUiclap={book.linkUiclap}
+                links={book.links}
               />
             </div>
           </div>

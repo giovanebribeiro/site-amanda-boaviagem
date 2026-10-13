@@ -1,64 +1,74 @@
 import { render, screen, act } from "@testing-library/react";
 import Countdown from "@/components/ui/Countdown";
+import type { BookLink } from "@/types";
 
 const PAST_DATE = "2020-01-01";
 const FUTURE_DATE = "2099-12-31";
 
+const LINKS: BookLink[] = [
+  { label: "Amazon", url: "https://amazon.com/test", primary: true },
+  { label: "Uiclap", url: "https://uiclap.com/test" },
+];
+
+async function renderCountdown(releaseDate: string, links?: BookLink[]) {
+  await act(async () => {
+    render(<Countdown releaseDate={releaseDate} links={links} />);
+  });
+}
+
 describe("Countdown", () => {
-  it("renders nothing before mount (SSR safety)", () => {
+  it("renders without crashing before mount effects settle", () => {
     const { container } = render(
-      <Countdown
-        releaseDate={FUTURE_DATE}
-        linkAmazon="https://amazon.com"
-        linkUiclap="https://uiclap.com"
-      />
+      <Countdown releaseDate={FUTURE_DATE} links={LINKS} />
     );
-    // Before useEffect fires (synchronous render), the mounted guard returns null
-    // After act(), the component has mounted — we just verify it doesn't crash
     expect(container).toBeInTheDocument();
   });
 
-  it("shows buy links when releaseDate is in the past", async () => {
-    await act(async () => {
-      render(
-        <Countdown
-          releaseDate={PAST_DATE}
-          linkAmazon="https://amazon.com/test"
-          linkUiclap="https://uiclap.com/test"
-        />
-      );
-    });
-    expect(screen.getByRole("link", { name: /amazon/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /uiclap/i })).toBeInTheDocument();
+  it("shows one button per link, with the label from the data, when released", async () => {
+    await renderCountdown(PAST_DATE, LINKS);
+    expect(screen.getByRole("link", { name: "Amazon" })).toHaveAttribute(
+      "href",
+      "https://amazon.com/test"
+    );
+    expect(screen.getByRole("link", { name: "Uiclap" })).toHaveAttribute(
+      "href",
+      "https://uiclap.com/test"
+    );
   });
 
-  it("shows countdown when releaseDate is in the future", async () => {
-    await act(async () => {
-      render(
-        <Countdown
-          releaseDate={FUTURE_DATE}
-          linkAmazon="https://amazon.com/test"
-          linkUiclap="https://uiclap.com/test"
-        />
-      );
-    });
-    // Should show time units, not buy links
-    expect(screen.queryByRole("link", { name: /amazon/i })).not.toBeInTheDocument();
-    // Should render some countdown display
+  it("supports stores beyond Amazon and Uiclap", async () => {
+    await renderCountdown(PAST_DATE, [
+      { label: "Livraria Cultura", url: "https://cultura.com/x" },
+    ]);
+    expect(screen.getByRole("link", { name: "Livraria Cultura" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+  });
+
+  it("renders no buttons when links is empty (released)", async () => {
+    await renderCountdown(PAST_DATE, []);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
+
+  it("renders no buttons when links is omitted (released)", async () => {
+    await renderCountdown(PAST_DATE);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
+
+  it("fills only the primary link; the others are outlined", async () => {
+    await renderCountdown(PAST_DATE, LINKS);
+    expect(screen.getByRole("link", { name: "Amazon" })).toHaveClass("bg-primary");
+    expect(screen.getByRole("link", { name: "Uiclap" })).not.toHaveClass("bg-primary");
+    expect(screen.getByRole("link", { name: "Uiclap" })).toHaveClass("border-primary");
+  });
+
+  it("outlines a lone link that is not flagged primary", async () => {
+    await renderCountdown(PAST_DATE, [{ label: "Uiclap", url: "https://u.com/x" }]);
+    expect(screen.getByRole("link", { name: "Uiclap" })).not.toHaveClass("bg-primary");
+  });
+
+  it("shows the countdown, not the links, when releaseDate is in the future", async () => {
+    await renderCountdown(FUTURE_DATE, LINKS);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
     expect(screen.getByText(/dias/i)).toBeInTheDocument();
-  });
-
-  it("hides Amazon link when linkAmazon is empty (past release)", async () => {
-    await act(async () => {
-      render(
-        <Countdown
-          releaseDate={PAST_DATE}
-          linkAmazon=""
-          linkUiclap="https://uiclap.com/test"
-        />
-      );
-    });
-    expect(screen.queryByRole("link", { name: /amazon/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /uiclap/i })).toBeInTheDocument();
   });
 });

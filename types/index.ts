@@ -3,14 +3,19 @@ export interface Review {
   text: string;
 }
 
+export interface BookLink {
+  label: string;
+  url: string;
+  primary?: boolean;
+}
+
 export interface Book {
   id: number;
   slug: string;
   title: string;
   description: string;
   image: string;
-  linkAmazon: string;
-  linkUiclap: string;
+  links: BookLink[];
   direction: "left" | "right";
   releaseDate: string;
   slogan: string;

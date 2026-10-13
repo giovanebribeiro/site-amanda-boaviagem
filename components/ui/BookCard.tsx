@@ -6,7 +6,7 @@ interface BookCardProps {
 }
 
 export default function BookCard({ book }: BookCardProps) {
-  const { title, description, image, linkAmazon, linkUiclap } = book;
+  const { title, description, image, links } = book;
 
   return (
     <article className="flex flex-col bg-background rounded-2xl shadow-md overflow-hidden border border-foreground/10 hover:shadow-lg transition-shadow">
@@ -31,26 +31,21 @@ export default function BookCard({ book }: BookCardProps) {
 
         {/* Botões de compra */}
         <div className="flex flex-wrap gap-3 pt-2">
-          {linkAmazon && (
+          {links.map(({ label, url, primary }) => (
             <a
-              href={linkAmazon}
+              key={`${label}-${url}`}
+              href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 text-center font-sans text-sm font-medium px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+              className={
+                primary
+                  ? "flex-1 text-center font-sans text-sm font-medium px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                  : "flex-1 text-center font-sans text-sm font-medium px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
+              }
             >
-              Amazon
+              {label}
             </a>
-          )}
-          {linkUiclap && (
-            <a
-              href={linkUiclap}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 text-center font-sans text-sm font-medium px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
-            >
-              Uiclap
-            </a>
-          )}
+          ))}
         </div>
       </div>
     </article>

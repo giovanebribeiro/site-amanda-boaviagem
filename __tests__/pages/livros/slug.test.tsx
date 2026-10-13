@@ -53,8 +53,10 @@ const mockBook: Book = {
   title: "Amor nos Tempos de Quarentena - Amanda Boaviagem (2a Ed.)",
   description: "Amor e Morte andam lado a lado.",
   image: "/images/session03/book1.png",
-  linkAmazon: "https://amazon.com/test",
-  linkUiclap: "https://uiclap.com/test",
+  links: [
+    { label: "Amazon", url: "https://amazon.com/test" },
+    { label: "Uiclap", url: "https://uiclap.com/test" },
+  ],
   direction: "right",
   releaseDate: "2022-06-01",
   slogan: "A edição definitiva de um romance que emocionou o Brasil.",
@@ -86,9 +88,22 @@ describe("BookPage", () => {
     expect(screen.getByText(/amor e morte andam lado a lado/i)).toBeInTheDocument();
   });
 
-  it("renders the Amazon buy link when linkAmazon is non-empty", () => {
+  it("renders one buy button per link, labelled from the data", () => {
     render(<BookPage book={mockBook} />);
-    expect(screen.getByRole("link", { name: /amazon/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Amazon" })).toHaveAttribute(
+      "href",
+      "https://amazon.com/test"
+    );
+    expect(screen.getByRole("link", { name: "Uiclap" })).toHaveAttribute(
+      "href",
+      "https://uiclap.com/test"
+    );
+  });
+
+  it("renders no buy buttons when the book has no links", () => {
+    render(<BookPage book={{ ...mockBook, links: [] }} />);
+    expect(screen.queryByRole("link", { name: "Amazon" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Uiclap" })).not.toBeInTheDocument();
   });
 
   it("renders all review cards", () => {

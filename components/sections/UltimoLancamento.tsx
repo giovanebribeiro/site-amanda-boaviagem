@@ -48,8 +48,7 @@ export default function UltimoLancamento() {
             <div className="flex justify-center md:justify-start">
               <Countdown
                 releaseDate={book.releaseDate}
-                linkAmazon={book.linkAmazon}
-                linkUiclap={book.linkUiclap}
+                links={book.links}
               />
             </div>
 
