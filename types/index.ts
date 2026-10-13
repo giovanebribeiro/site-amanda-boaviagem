@@ -22,18 +22,6 @@ export interface Book {
   reviews: Review[];
 }
 
-export interface BannerItem {
-  id: number;
-  title: string;
-  src: string;
-}
-
-export interface TestimonialItem {
-  id: number;
-  title: string;
-  src: string;
-}
-
 export interface BlogPost {
   slug: string;
   title: string;
