@@ -4,18 +4,20 @@ import path from "path";
 export const DEFAULT_CONTENT_ROOT = path.join(process.cwd(), "content");
 
 /**
- * Reads a JSON file from the content root and validates that every required
- * field is a non-empty string. Fails with an error naming the file and field.
+ * Reads a JSON file from the content root and hands the parsed data to the
+ * shared schema parser, which validates it and names the file and field on error.
  */
-export function readJsonContent<T extends { [K in keyof T]: string }>(
+export function readJsonContent<T>(
   contentRoot: string,
   fileName: string,
-  requiredFields: readonly (keyof T & string)[],
+  parse: (data: Record<string, unknown>, fileName: string) => T,
 ): T {
   const filePath = path.join(contentRoot, fileName);
 
   if (!fs.existsSync(filePath)) {
-    throw new Error(`Invalid content (${fileName}): file not found at ${filePath}`);
+    throw new Error(
+      `Invalid content (${fileName}): file not found at ${filePath}`,
+    );
   }
 
   let data: Record<string, unknown>;
@@ -27,16 +29,5 @@ export function readJsonContent<T extends { [K in keyof T]: string }>(
     });
   }
 
-  for (const field of requiredFields) {
-    const value = data?.[field];
-    if (typeof value !== "string" || value.length === 0) {
-      throw new Error(
-        `Invalid content (${fileName}): missing required field: ${field}`,
-      );
-    }
-  }
-
-  return Object.fromEntries(
-    requiredFields.map((field) => [field, data[field]]),
-  ) as T;
+  return parse(data, fileName);
 }

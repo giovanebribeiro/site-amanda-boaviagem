@@ -1,53 +1,14 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
-import type { Book, BookLink, Review } from "@/types";
+import type { Book } from "@/types";
+import { parseBookFrontmatter } from "@/shared/content-schema";
 
 const DEFAULT_CONTENT_ROOT = path.join(process.cwd(), "content");
 const BOOK_EXTENSION = ".md";
-const REQUIRED_FIELDS = ["title", "releaseDate", "image"] as const;
 
 function booksDir(contentRoot: string): string {
   return path.join(contentRoot, "books");
-}
-
-function toIsoDate(value: unknown): string {
-  if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
-  }
-  return String(value);
-}
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-function invalid(slug: string, reason: string): Error {
-  return new Error(`Invalid book (${slug}${BOOK_EXTENSION}): ${reason}`);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0;
-}
-
-function parseLinks(slug: string, raw: unknown): BookLink[] {
-  if (raw === undefined) return [];
-  if (
-    !Array.isArray(raw) ||
-    !raw.every((l) => isNonEmptyString(l?.label) && isNonEmptyString(l?.url))
-  ) {
-    throw invalid(slug, "links must be a list of { label, url }");
-  }
-  return raw as BookLink[];
-}
-
-function parseReviews(slug: string, raw: unknown): Review[] {
-  if (raw === undefined) return [];
-  if (
-    !Array.isArray(raw) ||
-    !raw.every((r) => isNonEmptyString(r?.author) && isNonEmptyString(r?.text))
-  ) {
-    throw invalid(slug, "reviews must be a list of { author, text }");
-  }
-  return raw as Review[];
 }
 
 function parseBookFile(
@@ -55,31 +16,10 @@ function parseBookFile(
   slug: string,
 ): Omit<Book, "id" | "direction"> {
   const { data, content } = matter(fs.readFileSync(filePath, "utf8"));
-
-  for (const field of REQUIRED_FIELDS) {
-    if (
-      data[field] === undefined ||
-      data[field] === null ||
-      data[field] === ""
-    ) {
-      throw invalid(slug, `missing required field: ${field}`);
-    }
-  }
-
-  const releaseDate = toIsoDate(data.releaseDate);
-  if (!ISO_DATE.test(releaseDate)) {
-    throw invalid(slug, `releaseDate must be YYYY-MM-DD, got: ${releaseDate}`);
-  }
-
   return {
     slug,
-    title: String(data.title),
     description: content.trim(),
-    image: String(data.image),
-    links: parseLinks(slug, data.links),
-    releaseDate,
-    slogan: data.slogan ? String(data.slogan) : "",
-    reviews: parseReviews(slug, data.reviews),
+    ...parseBookFrontmatter(data, `${slug}${BOOK_EXTENSION}`),
   };
 }
 

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import type { BlogPost } from "@/types";
+import { parsePostFrontmatter } from "@/shared/content-schema";
 
 const BLOG_DIR = path.join(process.cwd(), "content", "blog");
 
@@ -22,10 +23,7 @@ export function getAllPosts(): BlogPost[] {
 
     return {
       slug,
-      title: (data.title as string) ?? slug,
-      date: (data.date as string) ?? "",
-      excerpt: (data.excerpt as string) ?? "",
-      ...(data.coverImage ? { coverImage: data.coverImage as string } : {}),
+      ...parsePostFrontmatter(data, slug),
     };
   });
 
@@ -47,10 +45,7 @@ export function getPostBySlug(slug: string): PostWithContent | null {
 
       return {
         slug,
-        title: (data.title as string) ?? slug,
-        date: (data.date as string) ?? "",
-        excerpt: (data.excerpt as string) ?? "",
-        ...(data.coverImage ? { coverImage: data.coverImage as string } : {}),
+        ...parsePostFrontmatter(data, slug),
         content,
       };
     }
