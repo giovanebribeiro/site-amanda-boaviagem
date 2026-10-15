@@ -2,29 +2,40 @@ import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
 import type { BlogPost } from "@/types";
-import { parsePostFrontmatter } from "@/shared/content-schema";
+import {
+  parsePostFrontmatter,
+  type PostFrontmatter,
+} from "@/shared/content-schema";
 
-const BLOG_DIR = path.join(process.cwd(), "content", "blog");
+const DEFAULT_ROOT = path.join(process.cwd(), "content");
 
-export function getAllPosts(): BlogPost[] {
-  if (!fs.existsSync(BLOG_DIR)) {
+function publishedPostOrNull(
+  slug: string,
+  frontmatter: PostFrontmatter,
+): BlogPost | null {
+  const { inPreparation, ...fields } = frontmatter;
+  return inPreparation ? null : { slug, ...fields };
+}
+
+export function getAllPosts(contentRoot: string = DEFAULT_ROOT): BlogPost[] {
+  const blogDir = path.join(contentRoot, "blog");
+  if (!fs.existsSync(blogDir)) {
     return [];
   }
 
   const files = fs
-    .readdirSync(BLOG_DIR)
+    .readdirSync(blogDir)
     .filter((f) => f.endsWith(".mdx") || f.endsWith(".md"));
 
-  const posts: BlogPost[] = files.map((filename) => {
+  const posts = files.flatMap((filename) => {
     const slug = filename.replace(/\.(mdx|md)$/, "");
-    const fullPath = path.join(BLOG_DIR, filename);
-    const raw = fs.readFileSync(fullPath, "utf8");
+    const raw = fs.readFileSync(path.join(blogDir, filename), "utf8");
     const { data } = matter(raw);
-
-    return {
+    const post = publishedPostOrNull(
       slug,
-      ...parsePostFrontmatter(data, slug),
-    };
+      parsePostFrontmatter(data, slug, filename),
+    );
+    return post ? [post] : [];
   });
 
   return posts.sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -34,20 +45,25 @@ export interface PostWithContent extends BlogPost {
   content: string;
 }
 
-export function getPostBySlug(slug: string): PostWithContent | null {
+export function getPostBySlug(
+  slug: string,
+  contentRoot: string = DEFAULT_ROOT,
+): PostWithContent | null {
+  const blogDir = path.join(contentRoot, "blog");
   const extensions = [".mdx", ".md"];
 
   for (const ext of extensions) {
-    const fullPath = path.join(BLOG_DIR, `${slug}${ext}`);
+    const filename = `${slug}${ext}`;
+    const fullPath = path.join(blogDir, filename);
     if (fs.existsSync(fullPath)) {
       const raw = fs.readFileSync(fullPath, "utf8");
       const { data, content } = matter(raw);
 
-      return {
+      const post = publishedPostOrNull(
         slug,
-        ...parsePostFrontmatter(data, slug),
-        content,
-      };
+        parsePostFrontmatter(data, slug, filename),
+      );
+      return post ? { ...post, content } : null;
     }
   }
 

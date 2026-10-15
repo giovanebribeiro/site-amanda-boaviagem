@@ -71,7 +71,19 @@ describe("parsePostFrontmatter", () => {
       title: "meu-post",
       date: "",
       excerpt: "",
+      inPreparation: false,
     });
+  });
+
+  it("defaults inPreparation to false and accepts booleans", () => {
+    expect(parsePostFrontmatter({}, "p").inPreparation).toBe(false);
+    expect(parsePostFrontmatter({ inPreparation: true }, "p").inPreparation).toBe(true);
+  });
+
+  it("rejects a non-boolean inPreparation naming file and field", () => {
+    expect(() =>
+      parsePostFrontmatter({ inPreparation: "sim" }, "p.mdx"),
+    ).toThrow(/p\.mdx.*inPreparation/);
   });
 
   it("includes coverImage only when present", () => {

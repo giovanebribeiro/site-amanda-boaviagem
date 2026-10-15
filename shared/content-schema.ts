@@ -28,6 +28,8 @@ export interface PostFrontmatter {
   date: string;
   excerpt: string;
   coverImage?: string;
+  /** "Em preparação": post saved in the repository but hidden from the site. */
+  inPreparation: boolean;
 }
 
 export interface ContactData {
@@ -154,11 +156,22 @@ export function parseBookFrontmatter(
 }
 
 /** Normalizes a post's frontmatter; posts are lenient and fall back to defaults. */
-export function parsePostFrontmatter(data: Raw, slug: string): PostFrontmatter {
+export function parsePostFrontmatter(
+  data: Raw,
+  slug: string,
+  fileName: string = slug,
+): PostFrontmatter {
+  if (
+    data.inPreparation !== undefined &&
+    typeof data.inPreparation !== "boolean"
+  ) {
+    throw invalidContent(fileName, "inPreparation must be a boolean");
+  }
   return {
     title: (data.title as string) ?? slug,
     date: (data.date as string) ?? "",
     excerpt: (data.excerpt as string) ?? "",
+    inPreparation: data.inPreparation ?? false,
     ...(data.coverImage ? { coverImage: data.coverImage as string } : {}),
   };
 }

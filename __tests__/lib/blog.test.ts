@@ -1,7 +1,15 @@
 import path from "path";
 import { getAllPosts, getPostBySlug } from "@/lib/blog";
 
-// Integration test: reads real MDX files from content/blog/
+const fixtures = path.join(__dirname, "..", "fixtures", "content-blog");
+const invalidFixtures = path.join(
+  __dirname,
+  "..",
+  "fixtures",
+  "content-blog-invalid",
+);
+
+// Integration tests: read real MDX files from content/blog/ and fixtures under __tests__/fixtures/content-blog*
 describe("blog helpers", () => {
   describe("getAllPosts", () => {
     it("returns an array", () => {
@@ -40,6 +48,24 @@ describe("blog helpers", () => {
       expect(post).not.toBeNull();
       expect(post).toHaveProperty("content");
       expect(post!.slug).toBe(posts[0].slug);
+    });
+  });
+
+  describe("Em preparação", () => {
+    it("excludes in-preparation posts from the listing", () => {
+      const slugs = getAllPosts(fixtures).map((p) => p.slug);
+      expect(slugs).toEqual(["publicado", "explicito"]);
+    });
+
+    it("treats an in-preparation post as not found by slug", () => {
+      expect(getPostBySlug("rascunho", fixtures)).toBeNull();
+      expect(getPostBySlug("publicado", fixtures)).not.toBeNull();
+    });
+
+    it("fails clearly when the flag is not a boolean", () => {
+      expect(() => getAllPosts(invalidFixtures)).toThrow(
+        /ruim\.mdx.*inPreparation/,
+      );
     });
   });
 });
