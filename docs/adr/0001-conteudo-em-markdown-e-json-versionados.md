@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: accepted (publicação e commit manual substituídos pelo ADR 0002)
 ---
 # Conteúdo do site em Markdown e JSON versionados em `content/`
 
