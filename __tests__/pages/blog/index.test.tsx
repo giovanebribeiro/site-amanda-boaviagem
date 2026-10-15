@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import BlogIndex, { getStaticProps } from "@/pages/blog/index";
-import type { BlogPost, ContactData } from "@/types";
+import type { BlogPost, ContactData, SiteData } from "@/types";
+import { siteFixture } from "../../fixtures/site";
 
 jest.mock("next/router", () => ({
   useRouter: () => ({ pathname: "/blog", push: jest.fn() }),
@@ -41,21 +42,24 @@ const mockPosts: BlogPost[] = [
 
 describe("BlogIndex page", () => {
   it("renders without crashing", () => {
-    render(<BlogIndex posts={mockPosts} contact={contact} />);
+    render(<BlogIndex posts={mockPosts} contact={contact} site={siteFixture} />);
   });
 
   it("renders page title", () => {
-    render(<BlogIndex posts={mockPosts} contact={contact} />);
-    expect(screen.getByRole("heading", { name: /blog/i })).toBeInTheDocument();
+    render(<BlogIndex posts={mockPosts} contact={contact} site={siteFixture} />);
+    expect(
+      screen.getByRole("heading", { name: siteFixture.blogTitle }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(siteFixture.blogSubtitle)).toBeInTheDocument();
   });
 
   it("renders each post card with title", () => {
-    render(<BlogIndex posts={mockPosts} contact={contact} />);
+    render(<BlogIndex posts={mockPosts} contact={contact} site={siteFixture} />);
     expect(screen.getAllByText("Meu primeiro post").length).toBeGreaterThan(0);
   });
 
   it("renders each post card with excerpt", () => {
-    render(<BlogIndex posts={mockPosts} contact={contact} />);
+    render(<BlogIndex posts={mockPosts} contact={contact} site={siteFixture} />);
     expect(screen.getByText("Breve descricao do post.")).toBeInTheDocument();
   });
 
@@ -68,9 +72,15 @@ describe("BlogIndex page", () => {
     ).toBe(true);
   });
 
+  it("getStaticProps provides the site texts", async () => {
+    const result = await getStaticProps({});
+    const { props } = result as { props: { site: SiteData } };
+    expect(props.site.blogTitle).toBe("Blog");
+  });
+
   it("getStaticProps provides the contact data for the footer", async () => {
     const result = await getStaticProps({});
     const { props } = result as { props: { contact: ContactData } };
-    expect(props.contact.email).toBe("amandaboaviagem@gmail.com");
+    expect(props.contact.email).toBe("escritora@amandaboaviagem.com.br");
   });
 });

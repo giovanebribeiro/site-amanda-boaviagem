@@ -1,20 +1,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import Countdown from "@/components/ui/Countdown";
-import type { Book } from "@/types";
+import type { Book, SiteData } from "@/types";
 
 interface UltimoLancamentoProps {
   book: Book | null;
+  site: SiteData;
 }
 
-export default function UltimoLancamento({ book }: UltimoLancamentoProps) {
+export default function UltimoLancamento({ book, site }: UltimoLancamentoProps) {
   if (!book) return null;
 
   return (
     <section className="py-20 px-4 bg-foreground/[0.03] border-b border-foreground/10">
       <div className="max-w-6xl mx-auto">
         <p className="font-sans text-xs uppercase tracking-widest text-primary text-center mb-12">
-          Último Lançamento
+          {site.latestReleaseTitle}
         </p>
 
         <div className="flex flex-col md:flex-row items-center gap-12">

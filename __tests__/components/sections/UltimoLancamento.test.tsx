@@ -1,6 +1,7 @@
 import { render, screen, act } from "@testing-library/react";
 import UltimoLancamento from "@/components/sections/UltimoLancamento";
 import type { Book } from "@/types";
+import { siteFixture } from "../../fixtures/site";
 
 jest.mock("next/image", () => ({
   __esModule: true,
@@ -26,13 +27,13 @@ const book: Book = {
 describe("UltimoLancamento", () => {
   it("renders without crashing", async () => {
     await act(async () => {
-      render(<UltimoLancamento book={book} />);
+      render(<UltimoLancamento book={book} site={siteFixture} />);
     });
   });
 
   it("renders the title of the book received by props", async () => {
     await act(async () => {
-      render(<UltimoLancamento book={book} />);
+      render(<UltimoLancamento book={book} site={siteFixture} />);
     });
     expect(
       screen.getByText(/amor nos tempos de quarentena.*2a ed/i)
@@ -41,7 +42,7 @@ describe("UltimoLancamento", () => {
 
   it("renders the slogan of the latest book", async () => {
     await act(async () => {
-      render(<UltimoLancamento book={book} />);
+      render(<UltimoLancamento book={book} site={siteFixture} />);
     });
     expect(
       screen.getByText(/edição definitiva/i)
@@ -50,22 +51,29 @@ describe("UltimoLancamento", () => {
 
   it("renders the description of the latest book", async () => {
     await act(async () => {
-      render(<UltimoLancamento book={book} />);
+      render(<UltimoLancamento book={book} site={siteFixture} />);
     });
     expect(screen.getByText(/amor e morte andam lado a lado/i)).toBeInTheDocument();
   });
 
   it("renders the cover image", async () => {
     await act(async () => {
-      render(<UltimoLancamento book={book} />);
+      render(<UltimoLancamento book={book} site={siteFixture} />);
     });
     expect(screen.getByRole("img")).toBeInTheDocument();
+  });
+
+  it("renders the section title received by props", async () => {
+    await act(async () => {
+      render(<UltimoLancamento book={book} site={siteFixture} />);
+    });
+    expect(screen.getByText(siteFixture.latestReleaseTitle)).toBeInTheDocument();
   });
 
   it("renders nothing when there is no book", async () => {
     let container!: HTMLElement;
     await act(async () => {
-      ({ container } = render(<UltimoLancamento book={null} />));
+      ({ container } = render(<UltimoLancamento book={null} site={siteFixture} />));
     });
     expect(container).toBeEmptyDOMElement();
   });

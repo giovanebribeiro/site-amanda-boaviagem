@@ -1,13 +1,14 @@
 import { FiInstagram } from "@react-icons/all-files/fi/FiInstagram";
 import { FiMail } from "@react-icons/all-files/fi/FiMail";
-import type { ContactData } from "@/types";
+import type { ContactData, SiteData } from "@/types";
 
 interface ContactProps {
   id: string;
   contact: ContactData;
+  site: SiteData;
 }
 
-export default function Contact({ id, contact }: ContactProps) {
+export default function Contact({ id, contact, site }: ContactProps) {
   const { instagram, instagramUrl, email } = contact;
 
   return (
@@ -17,10 +18,10 @@ export default function Contact({ id, contact }: ContactProps) {
     >
       <div className="max-w-2xl mx-auto text-center">
         <h2 className="font-serif text-4xl md:text-5xl font-bold text-foreground mb-6">
-          Contato
+          {site.contactTitle}
         </h2>
         <p className="font-sans text-foreground/60 mb-16">
-          Entre em contato ou siga Amanda nas redes sociais.
+          {site.contactSubtitle}
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-8">

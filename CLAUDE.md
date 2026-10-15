@@ -36,6 +36,8 @@ All editable content lives in `content/`; `public/` holds only images. Domain te
 content/
   books/<slug>.md   one Book per file (slug = file name = URL /livros/<slug>)
   about.json        { title, body, body2, image }
+  site.json         { slogan, heroWelcome, heroPhotoAlt, aboutPhotoAlt, latestReleaseTitle,
+                      booksTitle, booksSubtitle, blogTitle, blogSubtitle, contactTitle, contactSubtitle }
   contact.json      { instagram, instagramUrl, email }
   blog/             MDX posts
 ```
@@ -58,11 +60,11 @@ Sinopse...
 
 `id` and `direction` are never stored: `lib/books.ts` derives them (id from the sorted slug order, direction alternates over the newest-first list). A 2nd edition is a separate book file that reuses the same cover image.
 
-Readers (`lib/books.ts`, `lib/about.ts`, `lib/contact.ts`, shared `lib/json-content.ts`) use `fs`, so they run only at build time inside `getStaticProps`/`getStaticPaths`. They fail with a clear error naming the file and field when a required field is missing or malformed.
+Readers (`lib/books.ts`, `lib/about.ts`, `lib/contact.ts`, `lib/site.ts`, shared `lib/json-content.ts`) use `fs`, so they run only at build time inside `getStaticProps`/`getStaticPaths`. They fail with a clear error naming the file and field when a required field is missing or malformed.
 
 ### Props flow
 
-`getStaticProps` reads content and passes it down as props: `pages/index.tsx` gives `books` to `UltimoLancamento` (first item) and `Books`, `about` to `About`, `contact` to `Contact` and `Footer`. `pages/livros/[slug].tsx` passes `book` and `contact`. Components never touch the disk, so tests pass data directly. Any page that renders `Footer` must fetch `contact` in its own `getStaticProps`.
+`getStaticProps` reads content and passes it down as props: `pages/index.tsx` gives `books` to `UltimoLancamento` (first item) and `Books`, `about` to `About`, `contact` to `Contact` and `Footer`, `site` (the "Textos do site") to `Hero`, `Books`, `UltimoLancamento`, `About`, `Contact`, and `site.slogan` to `Header` and `Footer`. `pages/livros/[slug].tsx` passes `book`, `contact` and `site`. Components never touch the disk, so tests pass data directly. Any page that renders `Header` or `Footer` must fetch `contact` and `site` in its own `getStaticProps`. UI labels, navigation and aria-labels stay in code; only editorial text goes in `site.json`.
 
 To add a book: create `content/books/<slug>.md` and put the cover in `public/images/books/`. No code change.
 

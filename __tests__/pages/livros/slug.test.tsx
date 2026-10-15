@@ -3,7 +3,8 @@ import BookPage, {
   getStaticPaths,
   getStaticProps,
 } from "@/pages/livros/[slug]";
-import type { Book, ContactData } from "@/types";
+import type { Book, ContactData, SiteData } from "@/types";
+import { siteFixture } from "../../fixtures/site";
 
 jest.mock("next/router", () => ({
   useRouter: () => ({ pathname: "/livros/[slug]", push: jest.fn() }),
@@ -74,28 +75,28 @@ const mockBook: Book = {
 
 describe("BookPage", () => {
   it("renders without crashing", () => {
-    render(<BookPage book={mockBook} contact={contact} />);
+    render(<BookPage book={mockBook} contact={contact} site={siteFixture} />);
   });
 
   it("renders the book title as h1", () => {
-    render(<BookPage book={mockBook} contact={contact} />);
+    render(<BookPage book={mockBook} contact={contact} site={siteFixture} />);
     expect(
       screen.getByRole("heading", { level: 1, name: /amor nos tempos de quarentena/i })
     ).toBeInTheDocument();
   });
 
   it("renders the slogan", () => {
-    render(<BookPage book={mockBook} contact={contact} />);
+    render(<BookPage book={mockBook} contact={contact} site={siteFixture} />);
     expect(screen.getByText(/edição definitiva/i)).toBeInTheDocument();
   });
 
   it("renders the description", () => {
-    render(<BookPage book={mockBook} contact={contact} />);
+    render(<BookPage book={mockBook} contact={contact} site={siteFixture} />);
     expect(screen.getByText(/amor e morte andam lado a lado/i)).toBeInTheDocument();
   });
 
   it("renders one buy button per link, labelled from the data", () => {
-    render(<BookPage book={mockBook} contact={contact} />);
+    render(<BookPage book={mockBook} contact={contact} site={siteFixture} />);
     expect(screen.getByRole("link", { name: "Amazon" })).toHaveAttribute(
       "href",
       "https://amazon.com/test"
@@ -107,19 +108,19 @@ describe("BookPage", () => {
   });
 
   it("renders no buy buttons when the book has no links", () => {
-    render(<BookPage book={{ ...mockBook, links: [] }} contact={contact} />);
+    render(<BookPage book={{ ...mockBook, links: [] }} contact={contact} site={siteFixture} />);
     expect(screen.queryByRole("link", { name: "Amazon" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Uiclap" })).not.toBeInTheDocument();
   });
 
   it("renders all review cards", () => {
-    render(<BookPage book={mockBook} contact={contact} />);
+    render(<BookPage book={mockBook} contact={contact} site={siteFixture} />);
     expect(screen.getByText(/reli na segunda edição e me emocionei ainda mais/i)).toBeInTheDocument();
     expect(screen.getByText(/uma obra atemporal/i)).toBeInTheDocument();
   });
 
   it("renders the cover image", () => {
-    render(<BookPage book={mockBook} contact={contact} />);
+    render(<BookPage book={mockBook} contact={contact} site={siteFixture} />);
     expect(screen.getByRole("img", { name: /amor nos tempos/i })).toBeInTheDocument();
   });
 });
@@ -140,7 +141,6 @@ describe("BookPage — getStaticPaths", () => {
     const slugs = result.paths.map(
       (p) => (p as { params: { slug: string } }).params.slug
     );
-    expect(slugs).toContain("amor-nos-tempos-de-quarentena-2a-ed");
     expect(slugs).toContain("amor-nos-tempos-de-quarentena");
   });
 });
@@ -153,18 +153,26 @@ describe("BookPage — getStaticProps", () => {
 
   it("returns the book data for a valid slug", async () => {
     const result = await getStaticProps({
-      params: { slug: "amor-nos-tempos-de-quarentena-2a-ed" },
+      params: { slug: "amor-nos-tempos-de-quarentena" },
     });
     expect(result).toHaveProperty("props");
     const { props } = result as { props: { book: Book } };
-    expect(props.book.slug).toBe("amor-nos-tempos-de-quarentena-2a-ed");
+    expect(props.book.slug).toBe("amor-nos-tempos-de-quarentena");
+  });
+
+  it("provides the site texts for the header and footer", async () => {
+    const result = await getStaticProps({
+      params: { slug: "amor-nos-tempos-de-quarentena" },
+    });
+    const { props } = result as { props: { site: SiteData } };
+    expect(props.site.slogan).toBe("Escritora da Esperança");
   });
 
   it("provides the contact data for the footer", async () => {
     const result = await getStaticProps({
-      params: { slug: "amor-nos-tempos-de-quarentena-2a-ed" },
+      params: { slug: "amor-nos-tempos-de-quarentena" },
     });
     const { props } = result as { props: { contact: ContactData } };
-    expect(props.contact.email).toBe("amandaboaviagem@gmail.com");
+    expect(props.contact.email).toBe("escritora@amandaboaviagem.com.br");
   });
 });

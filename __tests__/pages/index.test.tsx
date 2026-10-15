@@ -4,7 +4,8 @@
  */
 import { render } from "@testing-library/react";
 import Home, { getStaticProps } from "@/pages/index";
-import type { AboutData, ContactData } from "@/types";
+import type { AboutData, ContactData, SiteData } from "@/types";
+import { siteFixture } from "../fixtures/site";
 
 const about: AboutData = {
   title: "Sobre mim",
@@ -31,7 +32,7 @@ jest.mock("next/router", () => ({
 
 describe("Home page", () => {
   it("renders without crashing", () => {
-    const { container } = render(<Home books={[]} about={about} contact={contact} />);
+    const { container } = render(<Home books={[]} about={about} contact={contact} site={siteFixture} />);
     expect(container).toBeInTheDocument();
   });
 
@@ -39,14 +40,29 @@ describe("Home page", () => {
     const result = await getStaticProps({});
     expect(result).toHaveProperty("props.books");
     const { books } = (result as { props: { books: { releaseDate: string }[] } }).props;
-    expect(books).toHaveLength(4);
+    expect(books).toHaveLength(2);
     expect(books[0].releaseDate >= books[1].releaseDate).toBe(true);
+  });
+
+  it("renders the Hero, section titles and contact from the site texts received by props", () => {
+    const { getByText } = render(
+      <Home books={[]} about={about} contact={contact} site={siteFixture} />,
+    );
+    expect(getByText(siteFixture.heroWelcome)).toBeInTheDocument();
+    expect(getByText(siteFixture.booksTitle)).toBeInTheDocument();
+    expect(getByText(siteFixture.contactTitle)).toBeInTheDocument();
+  });
+
+  it("getStaticProps provides the site texts from the content folder", async () => {
+    const result = await getStaticProps({});
+    const { props } = result as { props: { site: SiteData } };
+    expect(props.site.slogan).toBe("Escritora da Esperança");
   });
 
   it("getStaticProps provides about and contact from the content folder", async () => {
     const result = await getStaticProps({});
     const { props } = result as { props: { about: AboutData; contact: ContactData } };
     expect(props.about.title).toBe("Sobre mim");
-    expect(props.contact.email).toBe("amandaboaviagem@gmail.com");
+    expect(props.contact.email).toBe("escritora@amandaboaviagem.com.br");
   });
 });

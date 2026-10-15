@@ -1,11 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { SiteData } from "@/types";
 
 interface HeroProps {
   id: string;
+  site: SiteData;
 }
 
-export default function Hero({ id }: HeroProps) {
+export default function Hero({ id, site }: HeroProps) {
   return (
     <section
       id={id}
@@ -15,7 +17,7 @@ export default function Hero({ id }: HeroProps) {
         {/* Texto */}
         <div className="flex-1 text-center md:text-left">
           <p className="font-sans text-sm uppercase tracking-widest text-primary mb-4">
-            Escritora da Esperança
+            {site.slogan}
           </p>
           <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-tight mb-6">
             Amanda
@@ -23,8 +25,7 @@ export default function Hero({ id }: HeroProps) {
             Boaviagem
           </h1>
           <p className="font-sans text-lg text-foreground/70 mb-8 max-w-md mx-auto md:mx-0">
-            Histórias que tocam o coração e iluminam o caminho. Bem-vindo ao
-            universo literário de Amanda Boaviagem.
+            {site.heroWelcome}
           </p>
           <Link
             href="/#livros"
@@ -39,7 +40,7 @@ export default function Hero({ id }: HeroProps) {
           <div className="relative w-72 h-72 md:w-96 md:h-96 rounded-full overflow-hidden shadow-2xl border-4 border-primary/20">
             <Image
               src="/images/session02/amanda.jpeg"
-              alt="Amanda Boaviagem"
+              alt={site.heroPhotoAlt}
               fill
               className="object-cover object-top"
               priority

@@ -3,6 +3,7 @@ import {
   parseBookFrontmatter,
   parseContact,
   parsePostFrontmatter,
+  parseSite,
 } from "@/shared/content-schema";
 
 describe("parseBookFrontmatter", () => {
@@ -103,5 +104,35 @@ describe("parseAbout / parseContact", () => {
         "about.json",
       ),
     ).toThrow(/about\.json.*body\b/);
+  });
+});
+
+describe("parseSite", () => {
+  const site = {
+    slogan: "s",
+    heroWelcome: "w",
+    heroPhotoAlt: "a",
+    aboutPhotoAlt: "a2",
+    latestReleaseTitle: "l",
+    booksTitle: "bt",
+    booksSubtitle: "bs",
+    blogTitle: "gt",
+    blogSubtitle: "gs",
+    contactTitle: "ct",
+    contactSubtitle: "cs",
+  };
+
+  it("picks only the known fields", () => {
+    expect(parseSite({ ...site, extra: "x" }, "site.json")).toEqual(site);
+  });
+
+  it("names file and field for a missing or empty value", () => {
+    const { slogan: _slogan, ...withoutSlogan } = site;
+    expect(() => parseSite(withoutSlogan, "site.json")).toThrow(
+      /Invalid content \(site\.json\): missing required field: slogan/,
+    );
+    expect(() => parseSite({ ...site, booksTitle: "" }, "site.json")).toThrow(
+      /site\.json.*booksTitle/,
+    );
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Single source of truth for the Content schema (books, posts, about, contact).
+ * Single source of truth for the Content schema (books, posts, about, contact, site).
  * Pure functions only: no fs, no Next imports, so the desktop app can reuse it.
  */
 
@@ -43,9 +43,37 @@ export interface AboutData {
   image: string;
 }
 
+export interface SiteData {
+  slogan: string;
+  heroWelcome: string;
+  heroPhotoAlt: string;
+  aboutPhotoAlt: string;
+  latestReleaseTitle: string;
+  booksTitle: string;
+  booksSubtitle: string;
+  blogTitle: string;
+  blogSubtitle: string;
+  contactTitle: string;
+  contactSubtitle: string;
+}
+
 const BOOK_REQUIRED_FIELDS = ["title", "releaseDate", "image"] as const;
 const ABOUT_FIELDS = ["title", "body", "body2", "image"] as const;
 const CONTACT_FIELDS = ["instagram", "instagramUrl", "email"] as const;
+
+const SITE_FIELDS = [
+  "slogan",
+  "heroWelcome",
+  "heroPhotoAlt",
+  "aboutPhotoAlt",
+  "latestReleaseTitle",
+  "booksTitle",
+  "booksSubtitle",
+  "blogTitle",
+  "blogSubtitle",
+  "contactTitle",
+  "contactSubtitle",
+] as const;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -156,4 +184,8 @@ export function parseAbout(data: Raw, fileName: string): AboutData {
 
 export function parseContact(data: Raw, fileName: string): ContactData {
   return parseStringFields<ContactData>(data, fileName, CONTACT_FIELDS);
+}
+
+export function parseSite(data: Raw, fileName: string): SiteData {
+  return parseStringFields<SiteData>(data, fileName, SITE_FIELDS);
 }

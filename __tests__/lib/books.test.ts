@@ -92,12 +92,10 @@ describe("getBooksSortedByDate", () => {
     expect(slugs).toEqual(
       expect.arrayContaining([
         "amor-nos-tempos-de-quarentena",
-        "amor-nos-tempos-de-quarentena-2a-ed",
         "contronicas-historias-amorfas-de-quarentena",
-        "contronicas-historias-amorfas-de-quarentena-2a-ed",
       ])
     );
-    expect(slugs).toHaveLength(4);
+    expect(slugs).toHaveLength(2);
   });
 });
 

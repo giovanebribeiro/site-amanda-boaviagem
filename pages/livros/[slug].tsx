@@ -8,16 +8,19 @@ import ReviewCard from "@/components/ui/ReviewCard";
 import Countdown from "@/components/ui/Countdown";
 import { getBooksSortedByDate, getBookBySlug } from "@/lib/books";
 import { getContactData } from "@/lib/contact";
-import type { Book, ContactData } from "@/types";
+import { getSiteData } from "@/lib/site";
+import type { Book, ContactData, SiteData } from "@/types";
 
 interface BookPageProps {
   book: Book;
   contact: ContactData;
+  site: SiteData;
 }
 
 export default function BookPage({
   book,
   contact,
+  site,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   return (
     <>
@@ -26,7 +29,7 @@ export default function BookPage({
         <meta name="description" content={book.slogan} />
       </Head>
 
-      <Header />
+      <Header slogan={site.slogan} />
 
       <main className="min-h-screen bg-background text-foreground pt-16">
         <article className="max-w-5xl mx-auto px-4 py-20">
@@ -98,7 +101,7 @@ export default function BookPage({
         </article>
       </main>
 
-      <Footer contact={contact} />
+      <Footer contact={contact} slogan={site.slogan} />
     </>
   );
 }
@@ -119,5 +122,5 @@ export const getStaticProps: GetStaticProps<BookPageProps> = async ({
     return { notFound: true };
   }
 
-  return { props: { book, contact: getContactData() } };
+  return { props: { book, contact: getContactData(), site: getSiteData() } };
 };

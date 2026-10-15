@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import Books from "@/components/sections/Books";
 import type { Book } from "@/types";
+import { siteFixture } from "../../fixtures/site";
 
 jest.mock("next/image", () => ({
   __esModule: true,
@@ -27,16 +28,17 @@ const books = [makeBook(1), makeBook(2), makeBook(3)];
 
 describe("Books", () => {
   it("renders without crashing", () => {
-    render(<Books id="livros" books={books} />);
+    render(<Books id="livros" books={books} site={siteFixture} />);
   });
 
   it("renders section title", () => {
-    render(<Books id="livros" books={books} />);
-    expect(screen.getByText(/livros/i)).toBeInTheDocument();
+    render(<Books id="livros" books={books} site={siteFixture} />);
+    expect(screen.getByText(siteFixture.booksTitle)).toBeInTheDocument();
+    expect(screen.getByText(siteFixture.booksSubtitle)).toBeInTheDocument();
   });
 
   it("renders cover links pointing to /livros/ pages", () => {
-    render(<Books id="livros" books={books} />);
+    render(<Books id="livros" books={books} site={siteFixture} />);
     const coverLinks = screen
       .getAllByRole("link")
       .filter((l) => l.getAttribute("href")?.startsWith("/livros/"));
@@ -44,7 +46,7 @@ describe("Books", () => {
   });
 
   it("renders one cover link per book received by props", () => {
-    render(<Books id="livros" books={books} />);
+    render(<Books id="livros" books={books} site={siteFixture} />);
     const coverLinks = screen
       .getAllByRole("link")
       .filter((l) => l.getAttribute("href")?.startsWith("/livros/"));
@@ -52,12 +54,12 @@ describe("Books", () => {
   });
 
   it("renders with the given id attribute", () => {
-    const { container } = render(<Books id="livros" books={books} />);
+    const { container } = render(<Books id="livros" books={books} site={siteFixture} />);
     expect(container.querySelector("#livros")).toBeInTheDocument();
   });
 
   it("renders no covers when there are no books", () => {
-    render(<Books id="livros" books={[]} />);
+    render(<Books id="livros" books={[]} site={siteFixture} />);
     const coverLinks = screen
       .queryAllByRole("link")
       .filter((l) => l.getAttribute("href")?.startsWith("/livros/"));

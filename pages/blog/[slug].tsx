@@ -7,12 +7,14 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { getAllPosts, getPostBySlug } from "@/lib/blog";
 import { getContactData } from "@/lib/contact";
-import type { BlogPost, ContactData } from "@/types";
+import { getSiteData } from "@/lib/site";
+import type { BlogPost, ContactData, SiteData } from "@/types";
 
 interface PostPageProps {
   post: BlogPost;
   mdxSource: MDXRemoteSerializeResult;
   contact: ContactData;
+  site: SiteData;
 }
 
 function formatDate(dateStr: string): string {
@@ -28,6 +30,7 @@ export default function PostPage({
   post,
   mdxSource,
   contact,
+  site,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   return (
     <>
@@ -36,7 +39,7 @@ export default function PostPage({
         <meta name="description" content={post.excerpt} />
       </Head>
 
-      <Header />
+      <Header slogan={site.slogan} />
 
       <main className="min-h-screen bg-background text-foreground pt-16">
         <article className="max-w-3xl mx-auto px-4 py-20">
@@ -73,7 +76,7 @@ export default function PostPage({
         </article>
       </main>
 
-      <Footer contact={contact} />
+      <Footer contact={contact} slogan={site.slogan} />
     </>
   );
 }
@@ -107,6 +110,7 @@ export const getStaticProps: GetStaticProps<PostPageProps> = async ({
       },
       mdxSource,
       contact: getContactData(),
+      site: getSiteData(),
     },
   };
 };

@@ -3,6 +3,7 @@ export type {
   BookLink,
   ContactData,
   Review,
+  SiteData,
 } from "@/shared/content-schema";
 import type { BookLink, Review } from "@/shared/content-schema";
 

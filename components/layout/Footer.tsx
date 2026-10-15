@@ -18,9 +18,10 @@ const NAV_LINKS: NavLink[] = [
 
 interface FooterProps {
   contact: ContactData;
+  slogan: string;
 }
 
-export default function Footer({ contact }: FooterProps) {
+export default function Footer({ contact, slogan }: FooterProps) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -33,7 +34,7 @@ export default function Footer({ contact }: FooterProps) {
               Amanda Boaviagem
             </Link>
             <p className="text-sm text-foreground/60 font-sans">
-              Escritora da Esperança
+              {slogan}
             </p>
           </div>
 

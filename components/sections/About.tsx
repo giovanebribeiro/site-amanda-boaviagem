@@ -1,12 +1,13 @@
 import Image from "next/image";
-import type { AboutData } from "@/types";
+import type { AboutData, SiteData } from "@/types";
 
 interface AboutProps {
   id: string;
   about: AboutData;
+  site: SiteData;
 }
 
-export default function About({ id, about }: AboutProps) {
+export default function About({ id, about, site }: AboutProps) {
   const { title, body, body2, image } = about;
 
   return (
@@ -25,7 +26,7 @@ export default function About({ id, about }: AboutProps) {
             <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-2xl overflow-hidden shadow-xl">
               <Image
                 src={image}
-                alt="Amanda Boaviagem"
+                alt={site.aboutPhotoAlt}
                 fill
                 className="object-cover"
               />

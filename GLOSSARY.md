@@ -11,3 +11,5 @@
 **Último lançamento**: o Livro com a data de lançamento mais recente; ganha destaque na página inicial.
 
 **Conteúdo**: tudo que a autora edita sem mexer em código (livros, sobre, contato, blog). Vive em `content/`.
+
+**Textos do site**: textos gerais editáveis da página (slogan, boas-vindas do Hero, títulos e subtítulos de seção, textos alternativos das fotos). Vivem em `content/site.json`. Rótulos de interface, navegação e aria-labels não entram: ficam no código.

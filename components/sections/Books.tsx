@@ -1,20 +1,21 @@
 import BookCover from "@/components/ui/BookCover";
-import type { Book } from "@/types";
+import type { Book, SiteData } from "@/types";
 
 interface BooksProps {
   id: string;
   books: Book[];
+  site: SiteData;
 }
 
-export default function Books({ id, books }: BooksProps) {
+export default function Books({ id, books, site }: BooksProps) {
   return (
     <section id={id} className="py-24 px-4 bg-background">
       <div className="max-w-6xl mx-auto">
         <h2 className="font-serif text-4xl md:text-5xl font-bold text-foreground text-center mb-4">
-          Livros
+          {site.booksTitle}
         </h2>
         <p className="font-sans text-center text-foreground/60 mb-16 max-w-xl mx-auto">
-          Clique na capa para conhecer cada obra de Amanda Boaviagem.
+          {site.booksSubtitle}
         </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
