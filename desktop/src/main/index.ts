@@ -1,7 +1,15 @@
 import { join } from "node:path";
 import { BrowserWindow, app, dialog, ipcMain } from "electron";
-import { OPEN_REPOSITORY_CHANNEL } from "../common/channels";
-import { openRepository } from "./repository-service";
+import {
+  GET_IDENTITY_CHANNEL,
+  LIST_COVERS_CHANNEL,
+  OPEN_REPOSITORY_CHANNEL,
+  SAVE_BOOK_CHANNEL,
+  SET_IDENTITY_CHANNEL,
+} from "../common/channels";
+import type { BookDraft, Identity } from "../common/types";
+import { createIdentityStore } from "./identity-store";
+import { createWorkspace } from "./workspace";
 
 const WINDOW_WIDTH = 1100;
 const WINDOW_HEIGHT = 760;
@@ -40,11 +48,22 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  const identityStore = createIdentityStore(app.getPath("userData"));
+  const workspace = createWorkspace(identityStore);
+
   ipcMain.handle(OPEN_REPOSITORY_CHANNEL, async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender);
     if (!window) return null;
-    return openRepository(await pickFolder(window));
+    return workspace.open(await pickFolder(window));
   });
+  ipcMain.handle(LIST_COVERS_CHANNEL, () => workspace.covers());
+  ipcMain.handle(SAVE_BOOK_CHANNEL, (_event, draft: BookDraft) =>
+    workspace.saveBook(draft),
+  );
+  ipcMain.handle(GET_IDENTITY_CHANNEL, () => identityStore.read());
+  ipcMain.handle(SET_IDENTITY_CHANNEL, (_event, identity: Identity) =>
+    identityStore.write(identity),
+  );
 
   createWindow();
   app.on("activate", () => {
