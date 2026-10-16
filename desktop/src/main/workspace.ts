@@ -1,5 +1,6 @@
 import type { SingleFileKind } from "@shared/content-schema";
 import { isBookDraft, isCoverImportInput } from "../common/book-draft";
+import { isPostDraft } from "../common/post-draft";
 import {
   isSingleFileKind,
   isSingleFileValues,
@@ -9,6 +10,9 @@ import type {
   BookDraft,
   CoverImportInput,
   ImportCoverResult,
+  ListPostsResult,
+  PostDraft,
+  SavePostResult,
   ReadSingleResult,
   SaveSingleResult,
   OpenRepositoryResult,
@@ -24,6 +28,11 @@ const NO_IDENTITY_MESSAGE =
 const SAVE_FAILED_MESSAGE =
   "Não foi possível salvar o livro. Verifique a pasta do site e tente de novo.";
 
+const SAVE_POST_FAILED_MESSAGE =
+  "Não foi possível salvar o post. Verifique a pasta do site e tente de novo.";
+const LIST_POSTS_FAILED_MESSAGE =
+  "Não foi possível abrir os posts. Verifique a pasta do site e tente de novo.";
+
 const READ_FAILED_MESSAGE =
   "Não foi possível abrir este conteúdo. Verifique a pasta do site e tente de novo.";
 const SAVE_SINGLE_FAILED_MESSAGE =
@@ -37,6 +46,8 @@ export interface Workspace {
   covers(): readonly string[];
   importCover(input: CoverImportInput): Promise<ImportCoverResult>;
   saveBook(draft: BookDraft): Promise<SaveBookResult>;
+  listPosts(): ListPostsResult;
+  savePost(draft: PostDraft): Promise<SavePostResult>;
   readSingle(kind: SingleFileKind): ReadSingleResult;
   saveSingle(
     kind: SingleFileKind,
@@ -90,6 +101,32 @@ export function createWorkspace(identityStore: IdentityStore): Workspace {
       } catch (error) {
         console.error("Failed to save book", error);
         return { ok: false, error: SAVE_FAILED_MESSAGE };
+      }
+    },
+
+    listPosts() {
+      if (session === null) return { ok: false, error: NO_FOLDER_MESSAGE };
+      try {
+        return { ok: true, posts: session.listPosts() };
+      } catch (error) {
+        console.error("Failed to list posts", error);
+        return { ok: false, error: LIST_POSTS_FAILED_MESSAGE };
+      }
+    },
+
+    async savePost(draft) {
+      if (!isPostDraft(draft)) {
+        return { ok: false, error: SAVE_POST_FAILED_MESSAGE };
+      }
+      if (session === null) return { ok: false, error: NO_FOLDER_MESSAGE };
+      const author = identityStore.read();
+      if (author === null) return { ok: false, error: NO_IDENTITY_MESSAGE };
+      try {
+        const outcome = await session.savePost(draft, author);
+        return { ok: true, ...outcome, posts: session.listPosts() };
+      } catch (error) {
+        console.error("Failed to save post", error);
+        return { ok: false, error: SAVE_POST_FAILED_MESSAGE };
       }
     },
 

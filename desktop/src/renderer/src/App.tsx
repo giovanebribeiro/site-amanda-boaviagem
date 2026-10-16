@@ -5,6 +5,7 @@ import {
   SINGLE_FILE_TITLES,
 } from "../../common/single-file";
 import { emptyDraft } from "../../common/book-draft";
+import { emptyPostDraft } from "../../common/post-draft";
 import type {
   BookDraft,
   BookEntry,
@@ -12,21 +13,27 @@ import type {
   CoverTarget,
   ImportCoverResult,
   OpenRepositoryResult,
+  PostDraft,
+  PostEntry,
 } from "../../common/types";
 import { BookForm, type SaveOutcome } from "./BookForm";
 import { BookList } from "./BookList";
+import { PostForm, type PostSaveResult } from "./PostForm";
+import { PostList } from "./PostList";
 import { IdentityForm } from "./IdentityForm";
 import { SingleFileForm } from "./SingleFileForm";
 
 type Screen =
   | { name: "list" }
   | { name: "form"; draft: BookDraft }
+  | { name: "post"; draft: PostDraft }
   | { name: "single"; kind: SingleFileKind };
 
 const OPEN_FAILED = "Algo deu errado ao abrir a pasta. Tente de novo.";
 const IMPORT_COVER_FAILED =
   "Algo deu errado ao importar a capa. Tente de novo.";
 const SAVE_FAILED = "Algo deu errado ao salvar. Tente de novo.";
+const SAVE_POST_FAILED = "Algo deu errado ao salvar o post. Tente de novo.";
 const IDENTITY_FAILED = "Algo deu errado ao guardar seus dados. Tente de novo.";
 
 export function App() {
@@ -35,6 +42,7 @@ export function App() {
   );
   const [result, setResult] = useState<OpenRepositoryResult | null>(null);
   const [screen, setScreen] = useState<Screen>({ name: "list" });
+  const [posts, setPosts] = useState<readonly PostEntry[]>([]);
   const [covers, setCovers] = useState<readonly string[]>([]);
 
   useEffect(() => {
@@ -67,6 +75,8 @@ export function App() {
       setScreen({ name: "list" });
       if (opened.ok) {
         setCovers(await window.api.listCovers().catch(() => []));
+        const listed = await window.api.listPosts().catch(() => null);
+        setPosts(listed?.ok ? listed.posts : []);
       }
     } catch (error) {
       console.error("openRepository failed", error);
@@ -83,6 +93,18 @@ export function App() {
     } catch (error) {
       console.error("saveBook failed", error);
       return { ok: false, error: SAVE_FAILED };
+    }
+  };
+
+  const handleSavePost = async (draft: PostDraft): Promise<PostSaveResult> => {
+    try {
+      const saved = await window.api.savePost(draft);
+      if (!saved.ok) return saved;
+      setPosts(saved.posts);
+      return saved;
+    } catch (error) {
+      console.error("savePost failed", error);
+      return { ok: false, error: SAVE_POST_FAILED };
     }
   };
 
@@ -131,6 +153,25 @@ export function App() {
             onCreate={() => setScreen({ name: "form", draft: emptyDraft() })}
           />
         </section>
+      )}
+      {result?.ok === true && screen.name === "list" && (
+        <section aria-label="Posts">
+          <h2 className="mb-3 text-xl font-semibold">Posts</h2>
+          <PostList
+            posts={posts}
+            onEdit={(draft) => setScreen({ name: "post", draft })}
+            onCreate={() =>
+              setScreen({ name: "post", draft: emptyPostDraft() })
+            }
+          />
+        </section>
+      )}
+      {result?.ok === true && screen.name === "post" && (
+        <PostForm
+          initial={screen.draft}
+          onSave={handleSavePost}
+          onClose={() => setScreen({ name: "list" })}
+        />
       )}
       {result?.ok === true && screen.name === "list" && (
         <nav aria-label="Outros textos" className="flex gap-3">

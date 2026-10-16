@@ -10,8 +10,10 @@ import matter from "gray-matter";
 import {
   SINGLE_FILES,
   parseBookFrontmatter,
+  parsePostFrontmatter,
   type SingleFileKind,
 } from "@shared/content-schema";
+import { findMissingPost, serializePost } from "../common/post-draft";
 import {
   findMissingFields,
   serializeSingleFile,
@@ -31,7 +33,10 @@ import type {
   CoverImport,
   CoverImportInput,
   Identity,
+  PostDraft,
+  PostEntry,
   SaveBookOutcome,
+  SavePostOutcome,
   SaveSingleOutcome,
   SingleFileRead,
 } from "../common/types";
@@ -39,6 +44,10 @@ import { processCover } from "./cover-image";
 import { saveVersion } from "./version-store";
 
 const BOOK_EXTENSION = ".md";
+const POST_EXTENSIONS = [".mdx", ".md"];
+const NEW_POST_EXTENSION = ".mdx";
+
+const slugOf = (file: string): string => file.slice(0, file.lastIndexOf("."));
 const COVER_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
 const COVERS_URL_PREFIX = "/images/books";
 
@@ -64,6 +73,10 @@ export interface ContentSession {
   importCover(input: CoverImportInput): Promise<CoverImport>;
   /** Writes the book file and creates a local Versão salva. Incomplete drafts are allowed. */
   saveBook(draft: BookDraft, author: Identity): Promise<SaveBookOutcome>;
+  /** Posts newest first; unreadable files are listed as invalid. */
+  listPosts(): readonly PostEntry[];
+  /** Writes the post file and creates a local Versão salva. The slug is fixed at the first save. */
+  savePost(draft: PostDraft, author: Identity): Promise<SavePostOutcome>;
   /** Current values of about/contact/site; unreadable or missing files yield empty fields. */
   readSingle(kind: SingleFileKind): SingleFileRead;
   /** Writes the JSON file and creates a local Versão salva. Incomplete values are allowed. */
@@ -130,6 +143,41 @@ function readBook(booksDir: string, slug: string): BookEntry {
   }
 }
 
+function readPost(blogDir: string, fileName: string): PostEntry {
+  const slug = slugOf(fileName);
+  try {
+    const { data, content } = matter(
+      readFileSync(join(blogDir, fileName), "utf8"),
+    );
+    const frontmatter = parsePostFrontmatter(data, slug, fileName);
+    return {
+      slug,
+      status: "valid",
+      post: {
+        slug,
+        title: frontmatter.title,
+        date: String(
+          data.date instanceof Date
+            ? data.date.toISOString().slice(0, 10)
+            : frontmatter.date,
+        ),
+        excerpt: frontmatter.excerpt,
+        inPreparation: frontmatter.inPreparation,
+        body: content.trim(),
+        ...(frontmatter.coverImage
+          ? { coverImage: frontmatter.coverImage }
+          : {}),
+      },
+    };
+  } catch (error) {
+    return {
+      slug,
+      status: "invalid",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 function releaseDateOf(entry: BookEntry): string {
   return entry.status === "valid" ? entry.book.releaseDate : "";
 }
@@ -169,6 +217,15 @@ export function openContentSession(repoPath: string): ContentSession {
     throw new NotASiteRepositoryError(repoPath);
   }
   const booksDir = join(contentDir, "books");
+
+  const blogDir = join(contentDir, "blog");
+  const postFiles = (): string[] =>
+    existsSync(blogDir)
+      ? readdirSync(blogDir)
+          .filter((file) => POST_EXTENSIONS.includes(extname(file)))
+          .sort()
+      : [];
+  const postSlugs = (): string[] => postFiles().map(slugOf);
 
   const coversDir = join(repoPath, "public", "images", "books");
 
@@ -247,6 +304,33 @@ export function openContentSession(repoPath: string): ContentSession {
         author,
       });
       return { slug, missing: findMissing(draft), versionCreated };
+    },
+
+    listPosts() {
+      const dateOf = (entry: PostEntry): string =>
+        entry.status === "valid" ? entry.post.date : "";
+      return postFiles()
+        .map((file) => readPost(blogDir, file))
+        .sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
+    },
+
+    async savePost(draft, author) {
+      const slug = draft.slug ?? uniqueSlug(slugify(draft.title), postSlugs());
+      if (!SLUG_PATTERN.test(slug)) {
+        throw new Error(`Invalid post slug: ${slug}`);
+      }
+      const existing = postFiles().find((file) => slugOf(file) === slug);
+      const relativePath = `content/blog/${existing ?? `${slug}${NEW_POST_EXTENSION}`}`;
+      mkdirSync(blogDir, { recursive: true });
+      writeFileSync(join(repoPath, relativePath), serializePost(draft));
+
+      const versionCreated = await saveVersion({
+        repoPath,
+        filepaths: [relativePath],
+        message: `chore(content): atualizar post "${draft.title.trim() || slug}"`,
+        author,
+      });
+      return { slug, missing: findMissingPost(draft), versionCreated };
     },
 
     readSingle(kind) {

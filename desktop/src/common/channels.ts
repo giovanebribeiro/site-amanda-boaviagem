@@ -6,3 +6,5 @@ export const SET_IDENTITY_CHANNEL = "identity:set";
 export const IMPORT_COVER_CHANNEL = "cover:import";
 export const READ_SINGLE_CHANNEL = "single:read";
 export const SAVE_SINGLE_CHANNEL = "single:save";
+export const LIST_POSTS_CHANNEL = "posts:list";
+export const SAVE_POST_CHANNEL = "post:save";

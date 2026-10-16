@@ -5,15 +5,22 @@ import {
   GET_IDENTITY_CHANNEL,
   IMPORT_COVER_CHANNEL,
   LIST_COVERS_CHANNEL,
+  LIST_POSTS_CHANNEL,
   OPEN_REPOSITORY_CHANNEL,
   READ_SINGLE_CHANNEL,
   SAVE_BOOK_CHANNEL,
+  SAVE_POST_CHANNEL,
   SAVE_SINGLE_CHANNEL,
   SET_IDENTITY_CHANNEL,
 } from "../common/channels";
 import type { SingleFileKind } from "@shared/content-schema";
 import type { SingleFileValues } from "../common/single-file";
-import type { BookDraft, CoverTarget, Identity } from "../common/types";
+import type {
+  BookDraft,
+  CoverTarget,
+  Identity,
+  PostDraft,
+} from "../common/types";
 import { createIdentityStore } from "./identity-store";
 import { createWorkspace } from "./workspace";
 
@@ -99,6 +106,10 @@ app.whenReady().then(() => {
   });
   ipcMain.handle(SAVE_BOOK_CHANNEL, (_event, draft: BookDraft) =>
     workspace.saveBook(draft),
+  );
+  ipcMain.handle(LIST_POSTS_CHANNEL, () => workspace.listPosts());
+  ipcMain.handle(SAVE_POST_CHANNEL, (_event, draft: PostDraft) =>
+    workspace.savePost(draft),
   );
   ipcMain.handle(READ_SINGLE_CHANNEL, (_event, kind: SingleFileKind) =>
     workspace.readSingle(kind),

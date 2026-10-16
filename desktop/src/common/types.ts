@@ -80,3 +80,34 @@ export type SaveBookResult =
 
 export type OpenRepositoryResult =
   { ok: true; books: readonly BookEntry[] } | { ok: false; error: string };
+
+/** Editable post state; may be incomplete. `slug` is null until the first save and is never changed afterwards. */
+export interface PostDraft {
+  slug: string | null;
+  title: string;
+  date: string;
+  excerpt: string;
+  /** "Em preparação": saved in the repository but hidden from the site. */
+  inPreparation: boolean;
+  /** Markdown body (no JSX). */
+  body: string;
+  /** Kept as-is from an existing post; the app does not edit it yet. */
+  coverImage?: string;
+}
+
+export type PostEntry =
+  | { slug: string; status: "valid"; post: PostDraft & { slug: string } }
+  | { slug: string; status: "invalid"; error: string };
+
+export interface SavePostOutcome {
+  slug: string;
+  missing: string[];
+  versionCreated: boolean;
+}
+
+export type SavePostResult =
+  | ({ ok: true; posts: readonly PostEntry[] } & SavePostOutcome)
+  | { ok: false; error: string };
+
+export type ListPostsResult =
+  { ok: true; posts: readonly PostEntry[] } | { ok: false; error: string };

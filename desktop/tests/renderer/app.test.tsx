@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../../src/renderer/src/App";
 import type {
   BookEntry,
+  PostEntry,
+  SavePostResult,
   Identity,
   OpenRepositoryResult,
   SaveBookResult,
@@ -41,6 +43,8 @@ function stubApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     }),
     saveSingle: vi.fn(),
     importCover: vi.fn().mockResolvedValue(null),
+    listPosts: vi.fn().mockResolvedValue({ ok: true, posts: [] }),
+    savePost: vi.fn(),
     ...overrides,
   };
   window.api = api;
@@ -462,5 +466,167 @@ describe("App: single-file content", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Capa")).toHaveValue("/images/books/a.png");
     });
+  });
+});
+
+describe("App: editing a post", () => {
+  const validPost: PostEntry = {
+    slug: "meu-post",
+    status: "valid",
+    post: {
+      slug: "meu-post",
+      title: "Meu post",
+      date: "2024-01-15",
+      excerpt: "Resumo.",
+      inPreparation: false,
+      body: "Texto do post.",
+    },
+  };
+  const savedPost = (
+    overrides: Partial<Extract<SavePostResult, { ok: true }>> = {},
+  ): SavePostResult => ({
+    ok: true,
+    slug: "meu-post",
+    missing: [],
+    versionCreated: true,
+    posts: [validPost],
+    ...overrides,
+  });
+
+  const openWithPosts = async (
+    posts: PostEntry[],
+    overrides: Partial<DesktopApi> = {},
+  ): Promise<DesktopApi> => {
+    const api = stubApi({
+      openRepository: vi.fn().mockResolvedValue(opened([])),
+      listPosts: vi.fn().mockResolvedValue({ ok: true, posts }),
+      ...overrides,
+    });
+    render(<App />);
+    await openFolder();
+    return api;
+  };
+
+  it("lists posts and marks the ones in preparation", async () => {
+    await openWithPosts([
+      validPost,
+      {
+        ...validPost,
+        slug: "rascunho",
+        post: {
+          ...(validPost as Extract<PostEntry, { status: "valid" }>).post,
+          slug: "rascunho",
+          title: "Rascunho",
+          inPreparation: true,
+        },
+      },
+      {
+        slug: "quebrado",
+        status: "invalid",
+        error: "inPreparation must be a boolean",
+      },
+    ]);
+
+    const region = await screen.findByRole("region", { name: "Posts" });
+    expect(within(region).getByText("Meu post")).toBeInTheDocument();
+    expect(within(region).getByText(/em preparação/i)).toBeInTheDocument();
+    expect(within(region).getByText(/must be a boolean/)).toBeInTheDocument();
+  });
+
+  it("edits a post keeping its slug and confirms the saved version", async () => {
+    const api = await openWithPosts([validPost], {
+      savePost: vi.fn().mockResolvedValue(savedPost()),
+    });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /editar post meu post/i }),
+    );
+    const title = screen.getByLabelText("Título");
+    await userEvent.clear(title);
+    await userEvent.type(title, "Novo título");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(api.savePost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: "meu-post",
+        title: "Novo título",
+        body: "Texto do post.",
+        inPreparation: false,
+      }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      /versão salva/i,
+    );
+  });
+
+  it("creates a post in preparation and shows what is missing", async () => {
+    const api = await openWithPosts([], {
+      savePost: vi
+        .fn()
+        .mockResolvedValue(
+          savedPost({ slug: "novo", missing: ["Resumo"], posts: [] }),
+        ),
+    });
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Novo post" }),
+    );
+    await userEvent.type(screen.getByLabelText("Título"), "Novo");
+    await userEvent.click(screen.getByLabelText(/em preparação/i));
+
+    expect(screen.getByRole("list", { name: "O que falta" })).toHaveTextContent(
+      "Resumo",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(api.savePost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: null,
+        title: "Novo",
+        inPreparation: true,
+      }),
+    );
+  });
+
+  it("does not offer a field to change the slug", async () => {
+    await openWithPosts([validPost]);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /editar post meu post/i }),
+    );
+
+    expect(
+      screen.queryByLabelText(/slug|endereço do post/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("formats the selected text with the toolbar", async () => {
+    await openWithPosts([validPost]);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /editar post meu post/i }),
+    );
+    const body = screen.getByLabelText("Texto") as HTMLTextAreaElement;
+    body.setSelectionRange(0, 5);
+
+    await userEvent.click(screen.getByRole("button", { name: "Negrito" }));
+
+    expect(body.value).toBe("**Texto** do post.");
+  });
+
+  it("shows the save error without leaving the form", async () => {
+    await openWithPosts([validPost], {
+      savePost: vi.fn().mockResolvedValue({
+        ok: false,
+        error: "Não foi possível salvar o post.",
+      }),
+    });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /editar post meu post/i }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("salvar o post");
+    expect(screen.getByLabelText("Título")).toBeInTheDocument();
   });
 });

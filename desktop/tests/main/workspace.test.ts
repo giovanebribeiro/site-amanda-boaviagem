@@ -5,6 +5,7 @@ import { join } from "node:path";
 import git from "isomorphic-git";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { emptyDraft } from "../../src/common/book-draft";
+import { emptyPostDraft } from "../../src/common/post-draft";
 import { createIdentityStore } from "../../src/main/identity-store";
 import { createWorkspace } from "../../src/main/workspace";
 
@@ -182,6 +183,64 @@ describe("workspace", () => {
       expect(await workspace.importCover({ title: 1 } as never)).toMatchObject({
         ok: false,
       });
+    });
+  });
+});
+
+describe("workspace posts", () => {
+  let repo: string;
+  let userData: string;
+
+  beforeEach(async () => {
+    repo = mkdtempSync(join(tmpdir(), "wsp-repo-"));
+    userData = mkdtempSync(join(tmpdir(), "wsp-user-"));
+    await git.init({ fs, dir: repo, defaultBranch: "master" });
+    mkdirSync(join(repo, "content", "blog"), { recursive: true });
+  });
+  afterEach(() => {
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(userData, { recursive: true, force: true });
+  });
+
+  const post = {
+    ...emptyPostDraft(),
+    title: "Post",
+    date: "2024-01-01",
+    excerpt: "r",
+  };
+
+  it("refuses to list or save before a folder is opened", async () => {
+    const workspace = createWorkspace(createIdentityStore(userData));
+
+    expect(workspace.listPosts()).toMatchObject({ ok: false });
+    expect(await workspace.savePost(post)).toMatchObject({ ok: false });
+  });
+
+  it("rejects a malformed payload", async () => {
+    const store = createIdentityStore(userData);
+    store.write({ name: "Amanda", email: "a@b.com" });
+    const workspace = createWorkspace(store);
+    workspace.open(repo);
+
+    expect(await workspace.savePost({ title: 1 } as never)).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("saves offline and returns the refreshed list", async () => {
+    const store = createIdentityStore(userData);
+    store.write({ name: "Amanda", email: "a@b.com" });
+    const workspace = createWorkspace(store);
+    workspace.open(repo);
+
+    const result = await workspace.savePost(post);
+
+    expect(result).toMatchObject({
+      ok: true,
+      slug: "post",
+      versionCreated: true,
+      missing: [],
+      posts: [{ slug: "post", status: "valid" }],
     });
   });
 });

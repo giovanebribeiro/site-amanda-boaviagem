@@ -3,9 +3,11 @@ import {
   GET_IDENTITY_CHANNEL,
   IMPORT_COVER_CHANNEL,
   LIST_COVERS_CHANNEL,
+  LIST_POSTS_CHANNEL,
   OPEN_REPOSITORY_CHANNEL,
   READ_SINGLE_CHANNEL,
   SAVE_BOOK_CHANNEL,
+  SAVE_POST_CHANNEL,
   SAVE_SINGLE_CHANNEL,
   SET_IDENTITY_CHANNEL,
 } from "../common/channels";
@@ -15,6 +17,9 @@ import type {
   BookDraft,
   CoverTarget,
   ImportCoverResult,
+  ListPostsResult,
+  PostDraft,
+  SavePostResult,
   ReadSingleResult,
   SaveSingleResult,
   Identity,
@@ -32,6 +37,10 @@ const api = {
     ipcRenderer.invoke(IMPORT_COVER_CHANNEL, target),
   saveBook: (draft: BookDraft): Promise<SaveBookResult> =>
     ipcRenderer.invoke(SAVE_BOOK_CHANNEL, draft),
+  listPosts: (): Promise<ListPostsResult> =>
+    ipcRenderer.invoke(LIST_POSTS_CHANNEL),
+  savePost: (draft: PostDraft): Promise<SavePostResult> =>
+    ipcRenderer.invoke(SAVE_POST_CHANNEL, draft),
   readSingle: (kind: SingleFileKind): Promise<ReadSingleResult> =>
     ipcRenderer.invoke(READ_SINGLE_CHANNEL, kind),
   saveSingle: (
