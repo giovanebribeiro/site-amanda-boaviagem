@@ -70,4 +70,60 @@ describe("workspace", () => {
 
     expect(result).toMatchObject({ ok: false });
   });
+
+  describe("single-file content", () => {
+    const contact = {
+      instagram: "@a",
+      instagramUrl: "https://i.com/a",
+      email: "a@b.com",
+    };
+
+    it("refuses to read or save before a folder is opened", async () => {
+      const workspace = createWorkspace(createIdentityStore(userData));
+
+      expect(workspace.readSingle("contact")).toMatchObject({ ok: false });
+      expect(await workspace.saveSingle("contact", contact)).toMatchObject({
+        ok: false,
+      });
+    });
+
+    it("saves and reads back, reporting what is missing", async () => {
+      const store = createIdentityStore(userData);
+      store.write({ name: "Amanda", email: "a@b.com" });
+      const workspace = createWorkspace(store);
+      workspace.open(repo);
+
+      const saved = await workspace.saveSingle("contact", {
+        ...contact,
+        email: "",
+      });
+
+      expect(saved).toMatchObject({
+        ok: true,
+        missing: ["E-mail"],
+        versionCreated: true,
+      });
+      expect(workspace.readSingle("contact")).toMatchObject({
+        ok: true,
+        values: { instagram: "@a", email: "" },
+      });
+    });
+
+    it("rejects an unknown kind or malformed values from the renderer", async () => {
+      const store = createIdentityStore(userData);
+      store.write({ name: "Amanda", email: "a@b.com" });
+      const workspace = createWorkspace(store);
+      workspace.open(repo);
+
+      expect(
+        await workspace.saveSingle("blog" as never, contact),
+      ).toMatchObject({ ok: false });
+      expect(
+        await workspace.saveSingle("contact", { email: 1 } as never),
+      ).toMatchObject({ ok: false });
+      expect(workspace.readSingle("nope" as never)).toMatchObject({
+        ok: false,
+      });
+    });
+  });
 });

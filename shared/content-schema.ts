@@ -77,6 +77,18 @@ const SITE_FIELDS = [
   "contactSubtitle",
 ] as const;
 
+export type SingleFileKind = "about" | "contact" | "site";
+
+/** File name and required fields of each single-file content, in file order. */
+export const SINGLE_FILES: Record<
+  SingleFileKind,
+  { fileName: string; fields: readonly string[] }
+> = {
+  about: { fileName: "about.json", fields: ABOUT_FIELDS },
+  contact: { fileName: "contact.json", fields: CONTACT_FIELDS },
+  site: { fileName: "site.json", fields: SITE_FIELDS },
+};
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 type Raw = Record<string, unknown>;

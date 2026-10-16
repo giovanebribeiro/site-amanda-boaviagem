@@ -1,4 +1,9 @@
 import { useEffect, useState } from "react";
+import type { SingleFileKind } from "@shared/content-schema";
+import {
+  SINGLE_FILE_KINDS,
+  SINGLE_FILE_TITLES,
+} from "../../common/single-file";
 import { emptyDraft } from "../../common/book-draft";
 import type {
   BookDraft,
@@ -9,8 +14,12 @@ import type {
 import { BookForm, type SaveOutcome } from "./BookForm";
 import { BookList } from "./BookList";
 import { IdentityForm } from "./IdentityForm";
+import { SingleFileForm } from "./SingleFileForm";
 
-type Screen = { name: "list" } | { name: "form"; draft: BookDraft };
+type Screen =
+  | { name: "list" }
+  | { name: "form"; draft: BookDraft }
+  | { name: "single"; kind: SingleFileKind };
 
 const OPEN_FAILED = "Algo deu errado ao abrir a pasta. Tente de novo.";
 const SAVE_FAILED = "Algo deu errado ao salvar. Tente de novo.";
@@ -102,6 +111,27 @@ export function App() {
             onCreate={() => setScreen({ name: "form", draft: emptyDraft() })}
           />
         </section>
+      )}
+      {result?.ok === true && screen.name === "list" && (
+        <nav aria-label="Outros textos" className="flex gap-3">
+          {SINGLE_FILE_KINDS.map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              onClick={() => setScreen({ name: "single", kind })}
+              className="rounded border border-indigo-600 px-3 py-1 text-indigo-700"
+            >
+              {SINGLE_FILE_TITLES[kind]}
+            </button>
+          ))}
+        </nav>
+      )}
+      {result?.ok === true && screen.name === "single" && (
+        <SingleFileForm
+          key={screen.kind}
+          kind={screen.kind}
+          onClose={() => setScreen({ name: "list" })}
+        />
       )}
       {result?.ok === true && screen.name === "form" && (
         <BookForm

@@ -35,6 +35,11 @@ function stubApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     saveBook: vi.fn(),
     getIdentity: vi.fn().mockResolvedValue(identity),
     setIdentity: vi.fn(),
+    readSingle: vi.fn().mockResolvedValue({
+      ok: true,
+      values: { instagram: "@a", instagramUrl: "https://i.com/a", email: "" },
+    }),
+    saveSingle: vi.fn(),
     ...overrides,
   };
   window.api = api;
@@ -307,5 +312,56 @@ describe("App: editing a book", () => {
       screen.getByRole("button", { name: /remover link de compra 1/i }),
     );
     expect(screen.queryByLabelText("Rótulo do link 1")).not.toBeInTheDocument();
+  });
+});
+
+describe("App: single-file content", () => {
+  it("edits Contato, shows what is missing and saves a local version", async () => {
+    const api = stubApi({
+      openRepository: vi.fn().mockResolvedValue(opened([])),
+      saveSingle: vi.fn().mockResolvedValue({
+        ok: true,
+        missing: [],
+        versionCreated: true,
+      }),
+    });
+    render(<App />);
+    await openFolder();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Contato" }),
+    );
+
+    expect(api.readSingle).toHaveBeenCalledWith("contact");
+    const missing = await screen.findByRole("list", { name: "O que falta" });
+    expect(within(missing).getByText("E-mail")).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("E-mail"), "x@y.com");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(api.saveSingle).toHaveBeenCalledWith("contact", {
+      instagram: "@a",
+      instagramUrl: "https://i.com/a",
+      email: "x@y.com",
+    });
+    expect(await screen.findByRole("status")).toHaveTextContent("Versão salva");
+    expect(
+      screen.queryByRole("list", { name: "O que falta" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the error when the file cannot be read", async () => {
+    stubApi({
+      openRepository: vi.fn().mockResolvedValue(opened([])),
+      readSingle: vi.fn().mockResolvedValue({ ok: false, error: "Não deu." }),
+    });
+    render(<App />);
+    await openFolder();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Sobre a autora" }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não deu.");
   });
 });

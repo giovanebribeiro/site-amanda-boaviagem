@@ -7,7 +7,16 @@ import {
 } from "node:fs";
 import { extname, join } from "node:path";
 import matter from "gray-matter";
-import { parseBookFrontmatter } from "@shared/content-schema";
+import {
+  SINGLE_FILES,
+  parseBookFrontmatter,
+  type SingleFileKind,
+} from "@shared/content-schema";
+import {
+  findMissingFields,
+  serializeSingleFile,
+  type SingleFileValues,
+} from "../common/single-file";
 import {
   SLUG_PATTERN,
   findMissing,
@@ -20,6 +29,8 @@ import type {
   BookEntry,
   Identity,
   SaveBookOutcome,
+  SaveSingleOutcome,
+  SingleFileRead,
 } from "../common/types";
 import { saveVersion } from "./version-store";
 
@@ -40,6 +51,14 @@ export interface ContentSession {
   listCovers(): readonly string[];
   /** Writes the book file and creates a local Versão salva. Incomplete drafts are allowed. */
   saveBook(draft: BookDraft, author: Identity): Promise<SaveBookOutcome>;
+  /** Current values of about/contact/site; unreadable or missing files yield empty fields. */
+  readSingle(kind: SingleFileKind): SingleFileRead;
+  /** Writes the JSON file and creates a local Versão salva. Incomplete values are allowed. */
+  saveSingle(
+    kind: SingleFileKind,
+    values: SingleFileValues,
+    author: Identity,
+  ): Promise<SaveSingleOutcome>;
 }
 
 function toDraft(
@@ -102,6 +121,35 @@ function releaseDateOf(entry: BookEntry): string {
   return entry.status === "valid" ? entry.book.releaseDate : "";
 }
 
+function readSingleFile(
+  contentDir: string,
+  kind: SingleFileKind,
+): SingleFileRead {
+  const { fileName, fields } = SINGLE_FILES[kind];
+  const empty = Object.fromEntries(fields.map((key) => [key, ""]));
+  const filePath = join(contentDir, fileName);
+  if (!existsSync(filePath)) return { values: empty };
+  try {
+    const data = JSON.parse(readFileSync(filePath, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    return {
+      values: Object.fromEntries(
+        fields.map((key) => [
+          key,
+          typeof data[key] === "string" ? data[key] : "",
+        ]),
+      ),
+    };
+  } catch (error) {
+    return {
+      values: empty,
+      error: `${fileName}: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
 export function openContentSession(repoPath: string): ContentSession {
   const contentDir = join(repoPath, "content");
   if (!existsSync(contentDir)) {
@@ -152,6 +200,26 @@ export function openContentSession(repoPath: string): ContentSession {
         author,
       });
       return { slug, missing: findMissing(draft), versionCreated };
+    },
+
+    readSingle(kind) {
+      return readSingleFile(contentDir, kind);
+    },
+
+    async saveSingle(kind, values, author) {
+      const { fileName, fields } = SINGLE_FILES[kind];
+      const relativePath = `content/${fileName}`;
+      writeFileSync(
+        join(repoPath, relativePath),
+        serializeSingleFile(fields, values),
+      );
+      const versionCreated = await saveVersion({
+        repoPath,
+        filepaths: [relativePath],
+        message: `chore(content): atualizar ${fileName}`,
+        author,
+      });
+      return { missing: findMissingFields(kind, values), versionCreated };
     },
   };
 }

@@ -4,9 +4,13 @@ import {
   GET_IDENTITY_CHANNEL,
   LIST_COVERS_CHANNEL,
   OPEN_REPOSITORY_CHANNEL,
+  READ_SINGLE_CHANNEL,
   SAVE_BOOK_CHANNEL,
+  SAVE_SINGLE_CHANNEL,
   SET_IDENTITY_CHANNEL,
 } from "../common/channels";
+import type { SingleFileKind } from "@shared/content-schema";
+import type { SingleFileValues } from "../common/single-file";
 import type { BookDraft, Identity } from "../common/types";
 import { createIdentityStore } from "./identity-store";
 import { createWorkspace } from "./workspace";
@@ -59,6 +63,14 @@ app.whenReady().then(() => {
   ipcMain.handle(LIST_COVERS_CHANNEL, () => workspace.covers());
   ipcMain.handle(SAVE_BOOK_CHANNEL, (_event, draft: BookDraft) =>
     workspace.saveBook(draft),
+  );
+  ipcMain.handle(READ_SINGLE_CHANNEL, (_event, kind: SingleFileKind) =>
+    workspace.readSingle(kind),
+  );
+  ipcMain.handle(
+    SAVE_SINGLE_CHANNEL,
+    (_event, kind: SingleFileKind, values: SingleFileValues) =>
+      workspace.saveSingle(kind, values),
   );
   ipcMain.handle(GET_IDENTITY_CHANNEL, () => identityStore.read());
   ipcMain.handle(SET_IDENTITY_CHANNEL, (_event, identity: Identity) =>

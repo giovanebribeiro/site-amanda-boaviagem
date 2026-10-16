@@ -1,3 +1,4 @@
+import type { SingleFileValues } from "./single-file";
 import type { BookFrontmatter, BookLink, Review } from "@shared/content-schema";
 
 export type BookSummary = BookFrontmatter & {
@@ -35,6 +36,23 @@ export interface SaveBookOutcome {
   missing: string[];
   versionCreated: boolean;
 }
+
+export interface SingleFileRead {
+  values: SingleFileValues;
+  /** Set when the existing file could not be parsed; values then start empty. */
+  error?: string;
+}
+
+export interface SaveSingleOutcome {
+  missing: string[];
+  versionCreated: boolean;
+}
+
+export type SaveSingleResult =
+  ({ ok: true } & SaveSingleOutcome) | { ok: false; error: string };
+
+export type ReadSingleResult =
+  ({ ok: true } & SingleFileRead) | { ok: false; error: string };
 
 export type SaveBookResult =
   | ({ ok: true; books: readonly BookEntry[] } & SaveBookOutcome)
