@@ -1,5 +1,5 @@
 import type { SingleFileKind } from "@shared/content-schema";
-import { isBookDraft } from "../common/book-draft";
+import { isBookDraft, isCoverImportInput } from "../common/book-draft";
 import {
   isSingleFileKind,
   isSingleFileValues,
@@ -7,12 +7,14 @@ import {
 } from "../common/single-file";
 import type {
   BookDraft,
+  CoverImportInput,
+  ImportCoverResult,
   ReadSingleResult,
   SaveSingleResult,
   OpenRepositoryResult,
   SaveBookResult,
 } from "../common/types";
-import type { ContentSession } from "./content-session";
+import { MissingBookNameError, type ContentSession } from "./content-session";
 import type { IdentityStore } from "./identity-store";
 import { openRepositoryWithSession } from "./repository-service";
 
@@ -27,9 +29,13 @@ const READ_FAILED_MESSAGE =
 const SAVE_SINGLE_FAILED_MESSAGE =
   "Não foi possível salvar. Verifique a pasta do site e tente de novo.";
 
+const IMPORT_COVER_FAILED_MESSAGE =
+  "Não foi possível importar a capa. Escolha um arquivo de imagem (PNG, JPG ou GIF) e tente de novo.";
+
 export interface Workspace {
   open(repoPath: string | null): OpenRepositoryResult | null;
   covers(): readonly string[];
+  importCover(input: CoverImportInput): Promise<ImportCoverResult>;
   saveBook(draft: BookDraft): Promise<SaveBookResult>;
   readSingle(kind: SingleFileKind): ReadSingleResult;
   saveSingle(
@@ -52,6 +58,25 @@ export function createWorkspace(identityStore: IdentityStore): Workspace {
 
     covers() {
       return session?.listCovers() ?? [];
+    },
+
+    async importCover(input) {
+      if (!isCoverImportInput(input)) {
+        return { ok: false, error: IMPORT_COVER_FAILED_MESSAGE };
+      }
+      if (session === null) return { ok: false, error: NO_FOLDER_MESSAGE };
+      try {
+        return { ok: true, ...(await session.importCover(input)) };
+      } catch (error) {
+        console.error("Failed to import cover", error);
+        return {
+          ok: false,
+          error:
+            error instanceof MissingBookNameError
+              ? error.message
+              : IMPORT_COVER_FAILED_MESSAGE,
+        };
+      }
     },
 
     async saveBook(draft) {

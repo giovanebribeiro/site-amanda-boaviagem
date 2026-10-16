@@ -40,6 +40,7 @@ function stubApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
       values: { instagram: "@a", instagramUrl: "https://i.com/a", email: "" },
     }),
     saveSingle: vi.fn(),
+    importCover: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
   window.api = api;
@@ -363,5 +364,103 @@ describe("App: single-file content", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Não deu.");
+  });
+  describe("cover import", () => {
+    it("sets the imported cover on the book and passes slug and title", async () => {
+      const api = stubApi({
+        openRepository: vi.fn().mockResolvedValue(opened([])),
+        importCover: vi.fn().mockResolvedValue({
+          ok: true,
+          image: "/images/books/rascunho/cover.png",
+        }),
+        listCovers: vi
+          .fn()
+          .mockResolvedValue(["/images/books/rascunho/cover.png"]),
+      });
+      render(<App />);
+      await openFolder();
+      await userEvent.click(
+        await screen.findByRole("button", { name: /novo livro/i }),
+      );
+      await userEvent.type(screen.getByLabelText("Título"), "Rascunho");
+
+      await userEvent.click(
+        screen.getByRole("button", { name: /importar capa/i }),
+      );
+
+      expect(api.importCover).toHaveBeenCalledWith({
+        slug: null,
+        title: "Rascunho",
+      });
+      expect(await screen.findByLabelText("Capa")).toHaveValue(
+        "/images/books/rascunho/cover.png",
+      );
+    });
+
+    it("shows the size warning but keeps the cover", async () => {
+      stubApi({
+        openRepository: vi.fn().mockResolvedValue(opened([])),
+        importCover: vi.fn().mockResolvedValue({
+          ok: true,
+          image: "/images/books/x/cover.jpg",
+          warning: "A capa ainda está pesada (900 KB).",
+        }),
+      });
+      render(<App />);
+      await openFolder();
+      await userEvent.click(
+        await screen.findByRole("button", { name: /novo livro/i }),
+      );
+      await userEvent.type(screen.getByLabelText("Título"), "X");
+
+      await userEvent.click(
+        screen.getByRole("button", { name: /importar capa/i }),
+      );
+
+      expect(await screen.findByRole("status")).toHaveTextContent(/pesada/i);
+      expect(screen.getByLabelText("Capa")).toHaveValue(
+        "/images/books/x/cover.jpg",
+      );
+    });
+
+    it("shows the error and keeps the current cover when import fails", async () => {
+      stubApi({
+        openRepository: vi.fn().mockResolvedValue(opened([validBook])),
+        importCover: vi.fn().mockResolvedValue({
+          ok: false,
+          error: "Este arquivo não é uma imagem.",
+        }),
+      });
+      render(<App />);
+      await openFolder();
+      await userEvent.click(
+        await screen.findByRole("button", { name: /editar/i }),
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: /importar capa/i }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(/imagem/i);
+      expect(screen.getByLabelText("Capa")).toHaveValue("/images/books/a.png");
+    });
+
+    it("does nothing when the author cancels the file picker", async () => {
+      stubApi({
+        openRepository: vi.fn().mockResolvedValue(opened([validBook])),
+      });
+      render(<App />);
+      await openFolder();
+      await userEvent.click(
+        await screen.findByRole("button", { name: /editar/i }),
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: /importar capa/i }),
+      );
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Capa")).toHaveValue("/images/books/a.png");
+    });
   });
 });

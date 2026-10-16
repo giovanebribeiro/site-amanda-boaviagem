@@ -126,4 +126,62 @@ describe("workspace", () => {
       });
     });
   });
+  describe("importCover", () => {
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64",
+    );
+
+    it("refuses before a folder is opened", async () => {
+      const workspace = createWorkspace(createIdentityStore(userData));
+
+      expect(
+        await workspace.importCover({ bytes: png, slug: null, title: "A" }),
+      ).toMatchObject({ ok: false });
+    });
+
+    it("returns the site path of the stored cover", async () => {
+      const workspace = createWorkspace(createIdentityStore(userData));
+      workspace.open(repo);
+
+      const result = await workspace.importCover({
+        bytes: png,
+        slug: null,
+        title: "Livro Novo",
+      });
+
+      expect(result).toEqual({
+        ok: true,
+        image: "/images/books/livro-novo/cover.png",
+      });
+      expect(workspace.covers()).toContain(
+        "/images/books/livro-novo/cover.png",
+      );
+    });
+
+    it("explains a file that is not an image instead of throwing", async () => {
+      const workspace = createWorkspace(createIdentityStore(userData));
+      workspace.open(repo);
+
+      const result = await workspace.importCover({
+        bytes: Buffer.from("texto"),
+        slug: null,
+        title: "A",
+      });
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: expect.stringContaining("imagem"),
+      });
+    });
+
+    it("rejects a malformed payload", async () => {
+      const workspace = createWorkspace(createIdentityStore(userData));
+      workspace.open(repo);
+
+      expect(await workspace.importCover({ title: 1 } as never)).toMatchObject({
+        ok: false,
+      });
+    });
+  });
 });

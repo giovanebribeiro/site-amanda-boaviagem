@@ -9,6 +9,8 @@ import type {
   BookDraft,
   BookEntry,
   Identity,
+  CoverTarget,
+  ImportCoverResult,
   OpenRepositoryResult,
 } from "../../common/types";
 import { BookForm, type SaveOutcome } from "./BookForm";
@@ -22,6 +24,8 @@ type Screen =
   | { name: "single"; kind: SingleFileKind };
 
 const OPEN_FAILED = "Algo deu errado ao abrir a pasta. Tente de novo.";
+const IMPORT_COVER_FAILED =
+  "Algo deu errado ao importar a capa. Tente de novo.";
 const SAVE_FAILED = "Algo deu errado ao salvar. Tente de novo.";
 const IDENTITY_FAILED = "Algo deu errado ao guardar seus dados. Tente de novo.";
 
@@ -82,6 +86,22 @@ export function App() {
     }
   };
 
+  const handleImportCover = async (
+    target: CoverTarget,
+  ): Promise<ImportCoverResult | null> => {
+    try {
+      const imported = await window.api.importCover(target);
+      if (imported === null) return null;
+      if (imported.ok) {
+        setCovers(await window.api.listCovers().catch(() => covers));
+      }
+      return imported;
+    } catch (error) {
+      console.error("importCover failed", error);
+      return { ok: false, error: IMPORT_COVER_FAILED };
+    }
+  };
+
   if (identity === undefined) return null;
   if (identity === null) return <IdentityForm onSubmit={handleIdentity} />;
 
@@ -138,6 +158,7 @@ export function App() {
           initial={screen.draft}
           covers={covers}
           onSave={handleSave}
+          onImportCover={handleImportCover}
           onClose={() => setScreen({ name: "list" })}
         />
       )}

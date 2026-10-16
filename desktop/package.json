@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
-    "isomorphic-git": "^1.44.2"
+    "isomorphic-git": "^1.44.2",
+    "jimp": "^1.6.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

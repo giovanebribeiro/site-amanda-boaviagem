@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { findMissing } from "../../common/book-draft";
-import type { BookDraft } from "../../common/types";
+import type {
+  BookDraft,
+  CoverTarget,
+  ImportCoverResult,
+} from "../../common/types";
 
 export type SaveOutcome =
   | { ok: true; slug: string; versionCreated: boolean }
@@ -10,6 +14,8 @@ interface Props {
   initial: BookDraft;
   covers: readonly string[];
   onSave: (draft: BookDraft) => Promise<SaveOutcome>;
+  /** Resolves null when the author cancels the file picker. */
+  onImportCover: (target: CoverTarget) => Promise<ImportCoverResult | null>;
   onClose: () => void;
 }
 
@@ -23,7 +29,13 @@ function removeAt<T>(items: readonly T[], index: number): T[] {
   return items.filter((_, i) => i !== index);
 }
 
-export function BookForm({ initial, covers, onSave, onClose }: Props) {
+export function BookForm({
+  initial,
+  covers,
+  onSave,
+  onImportCover,
+  onClose,
+}: Props) {
   const [draft, setDraft] = useState<BookDraft>(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +65,25 @@ export function BookForm({ initial, covers, onSave, onClose }: Props) {
       outcome.versionCreated
         ? "Versão salva neste computador. O site ainda não foi atualizado."
         : "Nada mudou desde a última versão salva.",
+    );
+  };
+
+  const handleImportCover = async (): Promise<void> => {
+    setError(null);
+    setNotice(null);
+    const outcome = await onImportCover({
+      slug: draft.slug,
+      title: draft.title,
+    });
+    if (outcome === null) return;
+    if (!outcome.ok) {
+      setError(outcome.error);
+      return;
+    }
+    update({ image: outcome.image });
+    setNotice(
+      outcome.warning ??
+        "Capa importada. Salve o livro para guardar a imagem na versão.",
     );
   };
 
@@ -94,6 +125,9 @@ export function BookForm({ initial, covers, onSave, onClose }: Props) {
           ))}
         </select>
       </label>
+      <button type="button" onClick={handleImportCover}>
+        Importar capa
+      </button>
       <label className="block">
         Slogan
         <input

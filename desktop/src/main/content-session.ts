@@ -19,6 +19,7 @@ import {
 } from "../common/single-file";
 import {
   SLUG_PATTERN,
+  coverRepoPath,
   findMissing,
   serializeBook,
   slugify,
@@ -27,11 +28,14 @@ import {
 import type {
   BookDraft,
   BookEntry,
+  CoverImport,
+  CoverImportInput,
   Identity,
   SaveBookOutcome,
   SaveSingleOutcome,
   SingleFileRead,
 } from "../common/types";
+import { processCover } from "./cover-image";
 import { saveVersion } from "./version-store";
 
 const BOOK_EXTENSION = ".md";
@@ -45,10 +49,19 @@ export class NotASiteRepositoryError extends Error {
   }
 }
 
+export class MissingBookNameError extends Error {
+  constructor() {
+    super("Preencha o título do livro antes de importar a capa.");
+    this.name = "MissingBookNameError";
+  }
+}
+
 export interface ContentSession {
   listBooks(): readonly BookEntry[];
   /** Existing cover images, as site paths (e.g. /images/books/x.png). */
   listCovers(): readonly string[];
+  /** Resizes and stores a cover under public/images/books/<slug>/; nothing is written on failure. */
+  importCover(input: CoverImportInput): Promise<CoverImport>;
   /** Writes the book file and creates a local Versão salva. Incomplete drafts are allowed. */
   saveBook(draft: BookDraft, author: Identity): Promise<SaveBookOutcome>;
   /** Current values of about/contact/site; unreadable or missing files yield empty fields. */
@@ -176,12 +189,40 @@ export function openContentSession(repoPath: string): ContentSession {
 
     listCovers() {
       if (!existsSync(coversDir)) return [];
-      return readdirSync(coversDir)
-        .filter((file) =>
-          COVER_EXTENSIONS.includes(extname(file).toLowerCase()),
-        )
-        .sort()
-        .map((file) => `${COVERS_URL_PREFIX}/${file}`);
+      const isCover = (file: string): boolean =>
+        COVER_EXTENSIONS.includes(extname(file).toLowerCase());
+      const entries = readdirSync(coversDir, { withFileTypes: true });
+      const flat = entries
+        .filter((entry) => entry.isFile() && isCover(entry.name))
+        .map((entry) => `${COVERS_URL_PREFIX}/${entry.name}`);
+      const perBook = entries
+        .filter((entry) => entry.isDirectory())
+        .flatMap((entry) =>
+          readdirSync(join(coversDir, entry.name))
+            .filter(isCover)
+            .map((file) => `${COVERS_URL_PREFIX}/${entry.name}/${file}`),
+        );
+      return [...flat, ...perBook].sort();
+    },
+
+    async importCover({ bytes, slug, title }) {
+      const folder =
+        slug ?? (title.trim() ? uniqueSlug(slugify(title), listSlugs()) : null);
+      if (folder === null) {
+        throw new MissingBookNameError();
+      }
+      if (!SLUG_PATTERN.test(folder)) {
+        throw new Error(`Invalid book slug: ${folder}`);
+      }
+      const processed = await processCover(bytes);
+      const bookCoversDir = join(coversDir, folder);
+      mkdirSync(bookCoversDir, { recursive: true });
+      const fileName = `cover${processed.extension}`;
+      writeFileSync(join(bookCoversDir, fileName), processed.bytes);
+      return {
+        image: `${COVERS_URL_PREFIX}/${folder}/${fileName}`,
+        ...(processed.warning ? { warning: processed.warning } : {}),
+      };
     },
 
     async saveBook(draft, author) {
@@ -193,9 +234,15 @@ export function openContentSession(repoPath: string): ContentSession {
       mkdirSync(booksDir, { recursive: true });
       writeFileSync(join(repoPath, relativePath), serializeBook(draft));
 
+      const coverFile = coverRepoPath(draft.image);
       const versionCreated = await saveVersion({
         repoPath,
-        filepaths: [relativePath],
+        filepaths: [
+          relativePath,
+          ...(coverFile && existsSync(join(repoPath, coverFile))
+            ? [coverFile]
+            : []),
+        ],
         message: `chore(content): atualizar livro "${draft.title.trim() || slug}"`,
         author,
       });

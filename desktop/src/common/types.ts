@@ -19,6 +19,26 @@ export interface BookDraft {
   synopsis: string;
 }
 
+/** Which book a cover belongs to. A null slug means not saved yet: the title names the folder. */
+export interface CoverTarget {
+  slug: string | null;
+  title: string;
+}
+
+export interface CoverImportInput extends CoverTarget {
+  bytes: Uint8Array;
+}
+
+export interface CoverImport {
+  /** Site path to store in the book's `image` field. */
+  image: string;
+  /** Set when the stored image is still heavy. */
+  warning?: string;
+}
+
+export type ImportCoverResult =
+  ({ ok: true } & CoverImport) | { ok: false; error: string };
+
 export interface Identity {
   name: string;
   email: string;

@@ -1,5 +1,5 @@
 import matter from "gray-matter";
-import type { BookDraft } from "./types";
+import type { BookDraft, CoverImportInput } from "./types";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_SLUG = "livro";
@@ -79,6 +79,27 @@ export function isBookDraft(value: unknown): value is BookDraft {
     Array.isArray(draft.reviews) &&
     draft.reviews.every((review) => isRecordOf(review, ["author", "text"]))
   );
+}
+
+/** Runtime check for the cover-import payload crossing the IPC boundary. */
+export function isCoverImportInput(value: unknown): value is CoverImportInput {
+  if (typeof value !== "object" || value === null) return false;
+  const input = value as Record<string, unknown>;
+  return (
+    input.bytes instanceof Uint8Array &&
+    (input.slug === null || isString(input.slug)) &&
+    isString(input.title)
+  );
+}
+
+const COVER_URL_PATTERN =
+  /^\/images\/books\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)?$/;
+
+/** Repo-relative path of a book cover, or null when the site path is not a safe one under /images/books. */
+export function coverRepoPath(image: string): string | null {
+  return COVER_URL_PATTERN.test(image) && !image.includes("..")
+    ? `public${image}`
+    : null;
 }
 
 function toLf(text: string): string {
