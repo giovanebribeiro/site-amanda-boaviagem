@@ -3,6 +3,12 @@ import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import git from "isomorphic-git";
+import { MDXRemote } from "next-mdx-remote";
+// Same React copy as next-mdx-remote (the site's), not the desktop app's.
+// @ts-expect-error -- untyped deep import on purpose (see above)
+import { createElement } from "../../../node_modules/react";
+// @ts-expect-error -- untyped deep import on purpose (see above)
+import { renderToStaticMarkup } from "../../../node_modules/react-dom/server";
 import { serialize } from "next-mdx-remote/serialize";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getAllPosts, getPostBySlug } from "../../../lib/blog";
@@ -51,5 +57,23 @@ describe("posts saved by the app, read by the site", () => {
 
     expect(getAllPosts(content())).toEqual([]);
     expect(getPostBySlug("post-de-teste", content())).toBeNull();
+  });
+
+  it("renders an inserted image with its alt text", async () => {
+    await openContentSession(repo).savePost(
+      {
+        ...draft,
+        body: "Antes\n\n![Capa na mesa](/images/blog/post-de-teste/image-1.png)\n\nDepois",
+      },
+      author,
+    );
+
+    const full = getPostBySlug("post-de-teste", content());
+    const html = renderToStaticMarkup(
+      createElement(MDXRemote, { ...(await serialize(full!.content)) }),
+    );
+
+    expect(html).toContain('src="/images/blog/post-de-teste/image-1.png"');
+    expect(html).toContain('alt="Capa na mesa"');
   });
 });

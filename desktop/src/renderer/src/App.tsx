@@ -12,6 +12,8 @@ import type {
   Identity,
   CoverTarget,
   ImportCoverResult,
+  ImportPostImageResult,
+  PostImageInput,
   OpenRepositoryResult,
   PostDraft,
   PostEntry,
@@ -32,6 +34,8 @@ type Screen =
 const OPEN_FAILED = "Algo deu errado ao abrir a pasta. Tente de novo.";
 const IMPORT_COVER_FAILED =
   "Algo deu errado ao importar a capa. Tente de novo.";
+const IMPORT_POST_IMAGE_FAILED =
+  "Algo deu errado ao inserir a imagem. Tente de novo.";
 const SAVE_FAILED = "Algo deu errado ao salvar. Tente de novo.";
 const SAVE_POST_FAILED = "Algo deu errado ao salvar o post. Tente de novo.";
 const IDENTITY_FAILED = "Algo deu errado ao guardar seus dados. Tente de novo.";
@@ -124,6 +128,17 @@ export function App() {
     }
   };
 
+  const handleImportPostImage = async (
+    input: PostImageInput,
+  ): Promise<ImportPostImageResult | null> => {
+    try {
+      return await window.api.importPostImage(input);
+    } catch (error) {
+      console.error("importPostImage failed", error);
+      return { ok: false, error: IMPORT_POST_IMAGE_FAILED };
+    }
+  };
+
   if (identity === undefined) return null;
   if (identity === null) return <IdentityForm onSubmit={handleIdentity} />;
 
@@ -170,6 +185,7 @@ export function App() {
         <PostForm
           initial={screen.draft}
           onSave={handleSavePost}
+          onImportImage={handleImportPostImage}
           onClose={() => setScreen({ name: "list" })}
         />
       )}

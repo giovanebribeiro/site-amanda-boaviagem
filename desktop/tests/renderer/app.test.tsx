@@ -45,6 +45,7 @@ function stubApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     importCover: vi.fn().mockResolvedValue(null),
     listPosts: vi.fn().mockResolvedValue({ ok: true, posts: [] }),
     savePost: vi.fn(),
+    importPostImage: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
   window.api = api;
@@ -628,5 +629,102 @@ describe("App: editing a post", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("salvar o post");
     expect(screen.getByLabelText("Título")).toBeInTheDocument();
+  });
+
+  describe("inserting an image", () => {
+    const imported = {
+      ok: true,
+      path: "/images/blog/meu-post/image-1.png",
+      markdown: "![Capa na mesa](/images/blog/meu-post/image-1.png)",
+    };
+
+    const openPost = async (overrides: Partial<DesktopApi> = {}) => {
+      const api = await openWithPosts([validPost], {
+        importPostImage: vi.fn().mockResolvedValue(imported),
+        ...overrides,
+      });
+      await userEvent.click(
+        await screen.findByRole("button", { name: /editar post meu post/i }),
+      );
+      return api;
+    };
+
+    it("sends the alt text and inserts the Markdown at the cursor", async () => {
+      const api = await openPost();
+      const body = screen.getByLabelText("Texto") as HTMLTextAreaElement;
+      body.setSelectionRange(5, 5);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Inserir imagem" }),
+      );
+      await userEvent.type(
+        screen.getByLabelText("Texto alternativo"),
+        "Capa na mesa",
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: /escolher imagem/i }),
+      );
+
+      expect(api.importPostImage).toHaveBeenCalledWith({
+        slug: "meu-post",
+        title: "Meu post",
+        alt: "Capa na mesa",
+      });
+      expect(await screen.findByLabelText("Texto")).toHaveValue(
+        `Texto\n\n${imported.markdown}\n\n do post.`,
+      );
+      expect(screen.queryByLabelText("Texto alternativo")).toBeNull();
+    });
+
+    it("refuses an image without alt text and does not open the picker", async () => {
+      const api = await openPost();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Inserir imagem" }),
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: /escolher imagem/i }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /texto alternativo/i,
+      );
+      expect(api.importPostImage).not.toHaveBeenCalled();
+    });
+
+    it("shows the weight warning and keeps the body when the import fails", async () => {
+      await openPost({
+        importPostImage: vi
+          .fn()
+          .mockResolvedValue({ ok: false, error: "Imagem inválida." }),
+      });
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Inserir imagem" }),
+      );
+      await userEvent.type(screen.getByLabelText("Texto alternativo"), "x");
+      await userEvent.click(
+        screen.getByRole("button", { name: /escolher imagem/i }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Imagem inválida.",
+      );
+      expect(screen.getByLabelText("Texto")).toHaveValue("Texto do post.");
+    });
+
+    it("stays put when the author cancels the picker", async () => {
+      await openPost({ importPostImage: vi.fn().mockResolvedValue(null) });
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Inserir imagem" }),
+      );
+      await userEvent.type(screen.getByLabelText("Texto alternativo"), "x");
+      await userEvent.click(
+        screen.getByRole("button", { name: /escolher imagem/i }),
+      );
+
+      expect(screen.getByLabelText("Texto")).toHaveValue("Texto do post.");
+    });
   });
 });

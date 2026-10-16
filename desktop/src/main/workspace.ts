@@ -1,6 +1,10 @@
 import type { SingleFileKind } from "@shared/content-schema";
 import { isBookDraft, isCoverImportInput } from "../common/book-draft";
-import { isPostDraft } from "../common/post-draft";
+import {
+  isPostDraft,
+  isPostImageImportInput,
+  sanitizeAlt,
+} from "../common/post-draft";
 import {
   isSingleFileKind,
   isSingleFileValues,
@@ -10,6 +14,9 @@ import type {
   BookDraft,
   CoverImportInput,
   ImportCoverResult,
+  ImportPostImageResult,
+  PostImageImportInput,
+  PostImageInput,
   ListPostsResult,
   PostDraft,
   SavePostResult,
@@ -18,7 +25,12 @@ import type {
   OpenRepositoryResult,
   SaveBookResult,
 } from "../common/types";
-import { MissingBookNameError, type ContentSession } from "./content-session";
+import {
+  MissingAltTextError,
+  MissingBookNameError,
+  MissingPostNameError,
+  type ContentSession,
+} from "./content-session";
 import type { IdentityStore } from "./identity-store";
 import { openRepositoryWithSession } from "./repository-service";
 
@@ -41,10 +53,16 @@ const SAVE_SINGLE_FAILED_MESSAGE =
 const IMPORT_COVER_FAILED_MESSAGE =
   "Não foi possível importar a capa. Escolha um arquivo de imagem (PNG, JPG ou GIF) e tente de novo.";
 
+const IMPORT_POST_IMAGE_FAILED_MESSAGE =
+  "Não foi possível inserir a imagem. Escolha um arquivo de imagem (PNG, JPG ou GIF) e tente de novo.";
+
 export interface Workspace {
   open(repoPath: string | null): OpenRepositoryResult | null;
   covers(): readonly string[];
   importCover(input: CoverImportInput): Promise<ImportCoverResult>;
+  /** Refusal to show before the file picker opens, or null when the request may proceed. */
+  checkPostImage(input: PostImageInput): ImportPostImageResult | null;
+  importPostImage(input: PostImageImportInput): Promise<ImportPostImageResult>;
   saveBook(draft: BookDraft): Promise<SaveBookResult>;
   listPosts(): ListPostsResult;
   savePost(draft: PostDraft): Promise<SavePostResult>;
@@ -86,6 +104,33 @@ export function createWorkspace(identityStore: IdentityStore): Workspace {
             error instanceof MissingBookNameError
               ? error.message
               : IMPORT_COVER_FAILED_MESSAGE,
+        };
+      }
+    },
+
+    checkPostImage(input) {
+      if (typeof input?.alt !== "string" || !sanitizeAlt(input.alt)) {
+        return { ok: false, error: new MissingAltTextError().message };
+      }
+      return null;
+    },
+
+    async importPostImage(input) {
+      if (!isPostImageImportInput(input)) {
+        return { ok: false, error: IMPORT_POST_IMAGE_FAILED_MESSAGE };
+      }
+      if (session === null) return { ok: false, error: NO_FOLDER_MESSAGE };
+      try {
+        return { ok: true, ...(await session.importPostImage(input)) };
+      } catch (error) {
+        console.error("Failed to import post image", error);
+        return {
+          ok: false,
+          error:
+            error instanceof MissingAltTextError ||
+            error instanceof MissingPostNameError
+              ? error.message
+              : IMPORT_POST_IMAGE_FAILED_MESSAGE,
         };
       }
     },

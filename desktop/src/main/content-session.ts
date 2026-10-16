@@ -13,7 +13,14 @@ import {
   parsePostFrontmatter,
   type SingleFileKind,
 } from "@shared/content-schema";
-import { findMissingPost, serializePost } from "../common/post-draft";
+import {
+  findMissingPost,
+  postImageMarkdown,
+  postImageRepoPaths,
+  postImageSitePath,
+  sanitizeAlt,
+  serializePost,
+} from "../common/post-draft";
 import {
   findMissingFields,
   serializeSingleFile,
@@ -35,6 +42,8 @@ import type {
   Identity,
   PostDraft,
   PostEntry,
+  PostImageImport,
+  PostImageImportInput,
   SaveBookOutcome,
   SavePostOutcome,
   SaveSingleOutcome,
@@ -65,6 +74,22 @@ export class MissingBookNameError extends Error {
   }
 }
 
+export class MissingPostNameError extends Error {
+  constructor() {
+    super("Preencha o título do post antes de inserir uma imagem.");
+    this.name = "MissingPostNameError";
+  }
+}
+
+export class MissingAltTextError extends Error {
+  constructor() {
+    super(
+      "Descreva a imagem (texto alternativo) antes de inserir. Ele ajuda quem não consegue ver a foto.",
+    );
+    this.name = "MissingAltTextError";
+  }
+}
+
 export interface ContentSession {
   listBooks(): readonly BookEntry[];
   /** Existing cover images, as site paths (e.g. /images/books/x.png). */
@@ -75,6 +100,8 @@ export interface ContentSession {
   saveBook(draft: BookDraft, author: Identity): Promise<SaveBookOutcome>;
   /** Posts newest first; unreadable files are listed as invalid. */
   listPosts(): readonly PostEntry[];
+  /** Resizes and stores an image under public/images/blog/<slug>/; alt text is required and nothing is written on failure. */
+  importPostImage(input: PostImageImportInput): Promise<PostImageImport>;
   /** Writes the post file and creates a local Versão salva. The slug is fixed at the first save. */
   savePost(draft: PostDraft, author: Identity): Promise<SavePostOutcome>;
   /** Current values of about/contact/site; unreadable or missing files yield empty fields. */
@@ -228,6 +255,7 @@ export function openContentSession(repoPath: string): ContentSession {
   const postSlugs = (): string[] => postFiles().map(slugOf);
 
   const coversDir = join(repoPath, "public", "images", "books");
+  const postImagesDir = join(repoPath, "public", "images", "blog");
 
   const listSlugs = (): string[] =>
     existsSync(booksDir)
@@ -314,6 +342,32 @@ export function openContentSession(repoPath: string): ContentSession {
         .sort((a, b) => dateOf(b).localeCompare(dateOf(a)));
     },
 
+    async importPostImage({ bytes, slug, title, alt }) {
+      if (!sanitizeAlt(alt)) throw new MissingAltTextError();
+      const folder =
+        slug ?? (title.trim() ? uniqueSlug(slugify(title), postSlugs()) : null);
+      if (folder === null) throw new MissingPostNameError();
+      if (!SLUG_PATTERN.test(folder)) {
+        throw new Error(`Invalid post slug: ${folder}`);
+      }
+      const processed = await processCover(bytes, "A imagem");
+      const folderPath = join(postImagesDir, folder);
+      const taken = existsSync(folderPath) ? readdirSync(folderPath) : [];
+      let number = 1;
+      while (taken.some((file) => file.startsWith(`image-${number}.`))) {
+        number += 1;
+      }
+      const fileName = `image-${number}${processed.extension}`;
+      mkdirSync(folderPath, { recursive: true });
+      writeFileSync(join(folderPath, fileName), processed.bytes);
+      const path = postImageSitePath(folder, fileName);
+      return {
+        path,
+        markdown: postImageMarkdown(alt, path),
+        ...(processed.warning ? { warning: processed.warning } : {}),
+      };
+    },
+
     async savePost(draft, author) {
       const slug = draft.slug ?? uniqueSlug(slugify(draft.title), postSlugs());
       if (!SLUG_PATTERN.test(slug)) {
@@ -326,7 +380,12 @@ export function openContentSession(repoPath: string): ContentSession {
 
       const versionCreated = await saveVersion({
         repoPath,
-        filepaths: [relativePath],
+        filepaths: [
+          relativePath,
+          ...postImageRepoPaths(draft.body).filter((file) =>
+            existsSync(join(repoPath, file)),
+          ),
+        ],
         message: `chore(content): atualizar post "${draft.title.trim() || slug}"`,
         author,
       });

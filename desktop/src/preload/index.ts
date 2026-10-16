@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import {
   GET_IDENTITY_CHANNEL,
   IMPORT_COVER_CHANNEL,
+  IMPORT_POST_IMAGE_CHANNEL,
   LIST_COVERS_CHANNEL,
   LIST_POSTS_CHANNEL,
   OPEN_REPOSITORY_CHANNEL,
@@ -17,6 +18,8 @@ import type {
   BookDraft,
   CoverTarget,
   ImportCoverResult,
+  ImportPostImageResult,
+  PostImageInput,
   ListPostsResult,
   PostDraft,
   SavePostResult,
@@ -35,6 +38,11 @@ const api = {
   /** Opens the file picker; resolves null when the author cancels. */
   importCover: (target: CoverTarget): Promise<ImportCoverResult | null> =>
     ipcRenderer.invoke(IMPORT_COVER_CHANNEL, target),
+  /** Opens the file picker; resolves null when the author cancels. */
+  importPostImage: (
+    input: PostImageInput,
+  ): Promise<ImportPostImageResult | null> =>
+    ipcRenderer.invoke(IMPORT_POST_IMAGE_CHANNEL, input),
   saveBook: (draft: BookDraft): Promise<SaveBookResult> =>
     ipcRenderer.invoke(SAVE_BOOK_CHANNEL, draft),
   listPosts: (): Promise<ListPostsResult> =>

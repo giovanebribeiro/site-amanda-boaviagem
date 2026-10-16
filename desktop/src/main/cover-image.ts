@@ -29,7 +29,10 @@ function describeSize(bytes: number): string {
 }
 
 /** Shrinks to at most COVER_MAX_WIDTH (never enlarges) and warns if still heavy. */
-export async function processCover(input: Uint8Array): Promise<ProcessedCover> {
+export async function processCover(
+  input: Uint8Array,
+  subject: "A capa" | "A imagem" = "A capa",
+): Promise<ProcessedCover> {
   if (input.byteLength > MAX_INPUT_BYTES) {
     throw new Error("A imagem é grande demais (limite de 30 MB).");
   }
@@ -47,7 +50,7 @@ export async function processCover(input: Uint8Array): Promise<ProcessedCover> {
     extension: isPng ? ".png" : ".jpg",
     ...(bytes.byteLength > COVER_WARN_BYTES
       ? {
-          warning: `A capa ainda está pesada (${describeSize(bytes.byteLength)}). Prefira uma imagem menor para o site carregar rápido.`,
+          warning: `${subject} ainda está pesada (${describeSize(bytes.byteLength)}). Prefira uma imagem menor para o site carregar rápido.`,
         }
       : {}),
   };

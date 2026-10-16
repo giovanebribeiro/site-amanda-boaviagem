@@ -4,6 +4,7 @@ import { BrowserWindow, app, dialog, ipcMain } from "electron";
 import {
   GET_IDENTITY_CHANNEL,
   IMPORT_COVER_CHANNEL,
+  IMPORT_POST_IMAGE_CHANNEL,
   LIST_COVERS_CHANNEL,
   LIST_POSTS_CHANNEL,
   OPEN_REPOSITORY_CHANNEL,
@@ -20,6 +21,7 @@ import type {
   CoverTarget,
   Identity,
   PostDraft,
+  PostImageInput,
 } from "../common/types";
 import { createIdentityStore } from "./identity-store";
 import { createWorkspace } from "./workspace";
@@ -40,9 +42,12 @@ const COVER_FILE_FILTER = {
   extensions: ["png", "jpg", "jpeg", "gif"],
 };
 
-async function pickCoverFile(window: BrowserWindow): Promise<string | null> {
+async function pickImageFile(
+  window: BrowserWindow,
+  title: string,
+): Promise<string | null> {
   const { canceled, filePaths } = await dialog.showOpenDialog(window, {
-    title: "Escolha a imagem da capa",
+    title,
     properties: ["openFile"],
     filters: [COVER_FILE_FILTER],
   });
@@ -87,7 +92,7 @@ app.whenReady().then(() => {
   ipcMain.handle(IMPORT_COVER_CHANNEL, async (event, target: CoverTarget) => {
     const window = BrowserWindow.fromWebContents(event.sender);
     if (!window) return null;
-    const file = await pickCoverFile(window);
+    const file = await pickImageFile(window, "Escolha a imagem da capa");
     if (file === null) return null;
     try {
       const bytes = await readFile(file);
@@ -104,6 +109,33 @@ app.whenReady().then(() => {
       };
     }
   });
+  ipcMain.handle(
+    IMPORT_POST_IMAGE_CHANNEL,
+    async (event, input: PostImageInput) => {
+      const window = BrowserWindow.fromWebContents(event.sender);
+      if (!window) return null;
+      // The alt text is checked before the picker opens, so a refusal costs nothing.
+      const refusal = workspace.checkPostImage(input);
+      if (refusal) return refusal;
+      const file = await pickImageFile(window, "Escolha a imagem do post");
+      if (file === null) return null;
+      try {
+        const bytes = await readFile(file);
+        return await workspace.importPostImage({
+          bytes,
+          slug: input?.slug ?? null,
+          title: input?.title ?? "",
+          alt: input?.alt ?? "",
+        });
+      } catch (error) {
+        console.error("Failed to read post image file", error);
+        return {
+          ok: false,
+          error: "Não foi possível ler o arquivo escolhido. Tente de novo.",
+        };
+      }
+    },
+  );
   ipcMain.handle(SAVE_BOOK_CHANNEL, (_event, draft: BookDraft) =>
     workspace.saveBook(draft),
   );

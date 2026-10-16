@@ -1,7 +1,11 @@
 import { useRef, useState } from "react";
 import { applyFormat, type FormatKind } from "../../common/markdown-format";
 import { findMissingPost } from "../../common/post-draft";
-import type { PostDraft } from "../../common/types";
+import type {
+  ImportPostImageResult,
+  PostDraft,
+  PostImageInput,
+} from "../../common/types";
 
 export type PostSaveResult =
   | { ok: true; slug: string; versionCreated: boolean }
@@ -10,9 +14,14 @@ export type PostSaveResult =
 interface Props {
   initial: PostDraft;
   onSave: (draft: PostDraft) => Promise<PostSaveResult>;
+  onImportImage: (
+    input: PostImageInput,
+  ) => Promise<ImportPostImageResult | null>;
   onClose: () => void;
 }
 
+const IMPORT_IMAGE_FAILED =
+  "Algo deu errado ao inserir a imagem. Tente de novo.";
 const FIELD = "mt-1 w-full rounded border border-gray-300 p-2";
 
 const TOOLBAR: readonly { kind: FormatKind; label: string }[] = [
@@ -24,12 +33,15 @@ const TOOLBAR: readonly { kind: FormatKind; label: string }[] = [
   { kind: "link", label: "Link" },
 ];
 
-export function PostForm({ initial, onSave, onClose }: Props) {
+export function PostForm({ initial, onSave, onImportImage, onClose }: Props) {
   const [draft, setDraft] = useState<PostDraft>(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [imageAlt, setImageAlt] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [imageWarning, setImageWarning] = useState<string | null>(null);
 
   const missing = findMissingPost(draft);
   const update = (changes: Partial<PostDraft>): void =>
@@ -49,6 +61,55 @@ export function PostForm({ initial, onSave, onClose }: Props) {
       area.focus();
       area.setSelectionRange(result.selectionStart, result.selectionEnd);
     });
+  };
+
+  const insertAt = (markdown: string, at: number, end: number): void => {
+    const inserted = `\n\n${markdown}\n\n`;
+    // Functional update: the author may have kept typing while the picker was open.
+    setDraft((current) => ({
+      ...current,
+      body: current.body.slice(0, at) + inserted + current.body.slice(end),
+    }));
+    requestAnimationFrame(() => {
+      bodyRef.current?.focus();
+      bodyRef.current?.setSelectionRange(
+        at + inserted.length,
+        at + inserted.length,
+      );
+    });
+  };
+
+  const handleChooseImage = async (): Promise<void> => {
+    if (imageAlt === null) return;
+    if (!imageAlt.trim()) {
+      setImageError(
+        "Descreva a imagem no campo Texto alternativo antes de escolher o arquivo.",
+      );
+      return;
+    }
+    setImageError(null);
+    setImageWarning(null);
+    const at = bodyRef.current?.selectionStart ?? draft.body.length;
+    const end = bodyRef.current?.selectionEnd ?? at;
+    let result: ImportPostImageResult | null;
+    try {
+      result = await onImportImage({
+        slug: draft.slug,
+        title: draft.title,
+        alt: imageAlt,
+      });
+    } catch (failure) {
+      console.error("importPostImage failed", failure);
+      result = { ok: false, error: IMPORT_IMAGE_FAILED };
+    }
+    if (result === null) return;
+    if (!result.ok) {
+      setImageError(result.error);
+      return;
+    }
+    insertAt(result.markdown, at, end);
+    setImageWarning(result.warning ?? null);
+    setImageAlt(null);
   };
 
   const handleSave = async (): Promise<void> => {
@@ -127,7 +188,39 @@ export function PostForm({ initial, onSave, onClose }: Props) {
             {label}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() =>
+            setImageAlt((current) => (current === null ? "" : null))
+          }
+        >
+          Inserir imagem
+        </button>
       </div>
+      {imageAlt !== null && (
+        <div className="space-y-2 rounded border border-gray-300 p-3">
+          <label className="block">
+            Texto alternativo
+            <input
+              className={FIELD}
+              value={imageAlt}
+              onChange={(event) => setImageAlt(event.target.value)}
+            />
+          </label>
+          <p className="text-sm text-gray-600">
+            Descreva o que aparece na imagem. É obrigatório.
+          </p>
+          {imageError && (
+            <p role="alert" className="text-red-700">
+              {imageError}
+            </p>
+          )}
+          <button type="button" onClick={handleChooseImage}>
+            Escolher imagem
+          </button>
+        </div>
+      )}
+      {imageWarning && <p className="text-amber-700">{imageWarning}</p>}
       <label className="block">
         Texto
         <textarea

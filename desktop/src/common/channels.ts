@@ -8,3 +8,4 @@ export const READ_SINGLE_CHANNEL = "single:read";
 export const SAVE_SINGLE_CHANNEL = "single:save";
 export const LIST_POSTS_CHANNEL = "posts:list";
 export const SAVE_POST_CHANNEL = "post:save";
+export const IMPORT_POST_IMAGE_CHANNEL = "post-image:import";

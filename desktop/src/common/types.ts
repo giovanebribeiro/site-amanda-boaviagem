@@ -111,3 +111,30 @@ export type SavePostResult =
 
 export type ListPostsResult =
   { ok: true; posts: readonly PostEntry[] } | { ok: false; error: string };
+
+/** Which post an image belongs to. A null slug means not saved yet: the title names the folder. */
+export interface PostImageTarget {
+  slug: string | null;
+  title: string;
+}
+
+/** `alt` is the text alternativo; it is required. */
+export interface PostImageInput extends PostImageTarget {
+  alt: string;
+}
+
+export interface PostImageImportInput extends PostImageInput {
+  bytes: Uint8Array;
+}
+
+export interface PostImageImport {
+  /** Site path of the stored image (e.g. /images/blog/<slug>/image-1.png). */
+  path: string;
+  /** Markdown to insert in the post body. */
+  markdown: string;
+  /** Set when the stored image is still heavy. */
+  warning?: string;
+}
+
+export type ImportPostImageResult =
+  ({ ok: true } & PostImageImport) | { ok: false; error: string };
