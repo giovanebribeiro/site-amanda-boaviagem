@@ -1,0 +1,29 @@
+# Testes do App de gestão. Mudança só no site não dispara este workflow.
+name: Desktop tests
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "desktop/**"
+      - "shared/**"
+      - ".github/workflows/desktop-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm test
