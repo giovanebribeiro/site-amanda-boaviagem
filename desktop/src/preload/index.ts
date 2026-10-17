@@ -5,8 +5,10 @@ import {
   IMPORT_POST_IMAGE_CHANNEL,
   LIST_COVERS_CHANNEL,
   LIST_POSTS_CHANNEL,
+  LIST_VERSIONS_CHANNEL,
   OPEN_REPOSITORY_CHANNEL,
   READ_SINGLE_CHANNEL,
+  RESTORE_VERSION_CHANNEL,
   SAVE_BOOK_CHANNEL,
   SAVE_POST_CHANNEL,
   SAVE_SINGLE_CHANNEL,
@@ -21,6 +23,8 @@ import type {
   ImportPostImageResult,
   PostImageInput,
   ListPostsResult,
+  ListVersionsResult,
+  RestoreVersionResult,
   PostDraft,
   SavePostResult,
   ReadSingleResult,
@@ -56,6 +60,10 @@ const api = {
     values: SingleFileValues,
   ): Promise<SaveSingleResult> =>
     ipcRenderer.invoke(SAVE_SINGLE_CHANNEL, kind, values),
+  listVersions: (): Promise<ListVersionsResult> =>
+    ipcRenderer.invoke(LIST_VERSIONS_CHANNEL),
+  restoreVersion: (versionId: string): Promise<RestoreVersionResult> =>
+    ipcRenderer.invoke(RESTORE_VERSION_CHANNEL, versionId),
   getIdentity: (): Promise<Identity | null> =>
     ipcRenderer.invoke(GET_IDENTITY_CHANNEL),
   setIdentity: (identity: Identity): Promise<IdentityResult> =>

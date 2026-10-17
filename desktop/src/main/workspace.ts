@@ -22,7 +22,9 @@ import type {
   SavePostResult,
   ReadSingleResult,
   SaveSingleResult,
+  ListVersionsResult,
   OpenRepositoryResult,
+  RestoreVersionResult,
   SaveBookResult,
 } from "../common/types";
 import {
@@ -32,6 +34,7 @@ import {
   type ContentSession,
 } from "./content-session";
 import type { IdentityStore } from "./identity-store";
+import { PendingChangesError } from "./version-store";
 import { openRepositoryWithSession } from "./repository-service";
 
 const NO_FOLDER_MESSAGE = "Abra a pasta do site antes de salvar.";
@@ -49,6 +52,14 @@ const READ_FAILED_MESSAGE =
   "Não foi possível abrir este conteúdo. Verifique a pasta do site e tente de novo.";
 const SAVE_SINGLE_FAILED_MESSAGE =
   "Não foi possível salvar. Verifique a pasta do site e tente de novo.";
+
+const LIST_VERSIONS_FAILED_MESSAGE =
+  "Não foi possível abrir o histórico. Verifique a pasta do site e tente de novo.";
+const RESTORE_FAILED_MESSAGE =
+  "Não foi possível voltar para esta versão. Nada foi alterado; tente de novo.";
+const PENDING_CHANGES_MESSAGE =
+  "Há alterações ainda não salvas. Salve (ou feche sem salvar) antes de voltar para uma versão anterior.";
+const VERSION_ID_PATTERN = /^[0-9a-f]{40}$/;
 
 const IMPORT_COVER_FAILED_MESSAGE =
   "Não foi possível importar a capa. Escolha um arquivo de imagem (PNG, JPG ou GIF) e tente de novo.";
@@ -71,6 +82,8 @@ export interface Workspace {
     kind: SingleFileKind,
     values: SingleFileValues,
   ): Promise<SaveSingleResult>;
+  listVersions(): Promise<ListVersionsResult>;
+  restoreVersion(versionId: string): Promise<RestoreVersionResult>;
 }
 
 /** Holds the opened content session for the app's lifetime. */
@@ -204,6 +217,44 @@ export function createWorkspace(identityStore: IdentityStore): Workspace {
       } catch (error) {
         console.error("Failed to save single-file content", error);
         return { ok: false, error: SAVE_SINGLE_FAILED_MESSAGE };
+      }
+    },
+
+    async listVersions() {
+      if (session === null) return { ok: false, error: NO_FOLDER_MESSAGE };
+      try {
+        return { ok: true, versions: await session.listVersions() };
+      } catch (error) {
+        console.error("Failed to list versions", error);
+        return { ok: false, error: LIST_VERSIONS_FAILED_MESSAGE };
+      }
+    },
+
+    async restoreVersion(versionId) {
+      if (
+        typeof versionId !== "string" ||
+        !VERSION_ID_PATTERN.test(versionId)
+      ) {
+        return { ok: false, error: RESTORE_FAILED_MESSAGE };
+      }
+      if (session === null) return { ok: false, error: NO_FOLDER_MESSAGE };
+      const author = identityStore.read();
+      if (author === null) return { ok: false, error: NO_IDENTITY_MESSAGE };
+      try {
+        const versionCreated = await session.restoreVersion(versionId, author);
+        return {
+          ok: true,
+          versionCreated,
+          versions: await session.listVersions(),
+          books: session.listBooks(),
+          posts: session.listPosts(),
+        };
+      } catch (error) {
+        if (error instanceof PendingChangesError) {
+          return { ok: false, error: PENDING_CHANGES_MESSAGE };
+        }
+        console.error("Failed to restore version", error);
+        return { ok: false, error: RESTORE_FAILED_MESSAGE };
       }
     },
   };

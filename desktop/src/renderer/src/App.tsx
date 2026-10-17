@@ -22,6 +22,7 @@ import { BookForm, type SaveOutcome } from "./BookForm";
 import { BookList } from "./BookList";
 import { PostForm, type PostSaveResult } from "./PostForm";
 import { PostList } from "./PostList";
+import { HistoryScreen } from "./HistoryScreen";
 import { IdentityForm } from "./IdentityForm";
 import { SingleFileForm } from "./SingleFileForm";
 
@@ -29,7 +30,8 @@ type Screen =
   | { name: "list" }
   | { name: "form"; draft: BookDraft }
   | { name: "post"; draft: PostDraft }
-  | { name: "single"; kind: SingleFileKind };
+  | { name: "single"; kind: SingleFileKind }
+  | { name: "history" };
 
 const OPEN_FAILED = "Algo deu errado ao abrir a pasta. Tente de novo.";
 const IMPORT_COVER_FAILED =
@@ -201,12 +203,28 @@ export function App() {
               {SINGLE_FILE_TITLES[kind]}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setScreen({ name: "history" })}
+            className="rounded border border-indigo-600 px-3 py-1 text-indigo-700"
+          >
+            Histórico
+          </button>
         </nav>
       )}
       {result?.ok === true && screen.name === "single" && (
         <SingleFileForm
           key={screen.kind}
           kind={screen.kind}
+          onClose={() => setScreen({ name: "list" })}
+        />
+      )}
+      {result?.ok === true && screen.name === "history" && (
+        <HistoryScreen
+          onRestored={(restored) => {
+            setResult({ ok: true, books: restored.books });
+            setPosts(restored.posts);
+          }}
           onClose={() => setScreen({ name: "list" })}
         />
       )}

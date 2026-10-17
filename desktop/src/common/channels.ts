@@ -9,3 +9,5 @@ export const SAVE_SINGLE_CHANNEL = "single:save";
 export const LIST_POSTS_CHANNEL = "posts:list";
 export const SAVE_POST_CHANNEL = "post:save";
 export const IMPORT_POST_IMAGE_CHANNEL = "post-image:import";
+export const LIST_VERSIONS_CHANNEL = "versions:list";
+export const RESTORE_VERSION_CHANNEL = "version:restore";

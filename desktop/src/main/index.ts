@@ -7,8 +7,10 @@ import {
   IMPORT_POST_IMAGE_CHANNEL,
   LIST_COVERS_CHANNEL,
   LIST_POSTS_CHANNEL,
+  LIST_VERSIONS_CHANNEL,
   OPEN_REPOSITORY_CHANNEL,
   READ_SINGLE_CHANNEL,
+  RESTORE_VERSION_CHANNEL,
   SAVE_BOOK_CHANNEL,
   SAVE_POST_CHANNEL,
   SAVE_SINGLE_CHANNEL,
@@ -150,6 +152,10 @@ app.whenReady().then(() => {
     SAVE_SINGLE_CHANNEL,
     (_event, kind: SingleFileKind, values: SingleFileValues) =>
       workspace.saveSingle(kind, values),
+  );
+  ipcMain.handle(LIST_VERSIONS_CHANNEL, () => workspace.listVersions());
+  ipcMain.handle(RESTORE_VERSION_CHANNEL, (_event, versionId: string) =>
+    workspace.restoreVersion(versionId),
   );
   ipcMain.handle(GET_IDENTITY_CHANNEL, () => identityStore.read());
   ipcMain.handle(SET_IDENTITY_CHANNEL, (_event, identity: Identity) =>

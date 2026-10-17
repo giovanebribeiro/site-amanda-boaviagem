@@ -46,11 +46,12 @@ import type {
   PostImageImportInput,
   SaveBookOutcome,
   SavePostOutcome,
+  SavedVersion,
   SaveSingleOutcome,
   SingleFileRead,
 } from "../common/types";
 import { processCover } from "./cover-image";
-import { saveVersion } from "./version-store";
+import { listVersions, restoreVersion, saveVersion } from "./version-store";
 
 const BOOK_EXTENSION = ".md";
 const POST_EXTENSIONS = [".mdx", ".md"];
@@ -112,6 +113,10 @@ export interface ContentSession {
     values: SingleFileValues,
     author: Identity,
   ): Promise<SaveSingleOutcome>;
+  /** Saved versions, newest first. */
+  listVersions(): Promise<readonly SavedVersion[]>;
+  /** Restores content as a new version on top of the history; nothing is deleted or sent anywhere. */
+  restoreVersion(versionId: string, author: Identity): Promise<boolean>;
 }
 
 function toDraft(
@@ -410,6 +415,14 @@ export function openContentSession(repoPath: string): ContentSession {
         author,
       });
       return { missing: findMissingFields(kind, values), versionCreated };
+    },
+
+    listVersions() {
+      return listVersions(repoPath);
+    },
+
+    restoreVersion(versionId, author) {
+      return restoreVersion({ repoPath, versionId, author });
     },
   };
 }

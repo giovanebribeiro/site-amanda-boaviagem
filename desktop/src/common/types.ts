@@ -138,3 +138,27 @@ export interface PostImageImport {
 
 export type ImportPostImageResult =
   ({ ok: true } & PostImageImport) | { ok: false; error: string };
+
+/** A Versão salva as shown in the history. */
+export interface SavedVersion {
+  /** Commit id; opaque to the renderer. */
+  id: string;
+  /** ISO timestamp. */
+  date: string;
+  description: string;
+}
+
+export type ListVersionsResult =
+  | { ok: true; versions: readonly SavedVersion[] }
+  | { ok: false; error: string };
+
+export type RestoreVersionResult =
+  | {
+      ok: true;
+      /** False when the content already matched that version. */
+      versionCreated: boolean;
+      versions: readonly SavedVersion[];
+      books: readonly BookEntry[];
+      posts: readonly PostEntry[];
+    }
+  | { ok: false; error: string };

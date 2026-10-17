@@ -46,6 +46,8 @@ function stubApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     listPosts: vi.fn().mockResolvedValue({ ok: true, posts: [] }),
     savePost: vi.fn(),
     importPostImage: vi.fn().mockResolvedValue(null),
+    listVersions: vi.fn().mockResolvedValue({ ok: true, versions: [] }),
+    restoreVersion: vi.fn(),
     ...overrides,
   };
   window.api = api;
@@ -726,5 +728,120 @@ describe("App: editing a post", () => {
 
       expect(screen.getByLabelText("Texto")).toHaveValue("Texto do post.");
     });
+  });
+});
+
+describe("App: history", () => {
+  const versions = [
+    {
+      id: "b".repeat(40),
+      date: "2026-10-15T14:30:00.000Z",
+      description: 'atualizar livro "Livro A"',
+    },
+    {
+      id: "a".repeat(40),
+      date: "2026-10-14T09:00:00.000Z",
+      description: "atualizar contact.json",
+    },
+  ];
+
+  async function openHistory(api: DesktopApi): Promise<void> {
+    vi.mocked(api.openRepository).mockResolvedValue(opened([validBook]));
+    render(<App />);
+    await openFolder();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /histórico/i }),
+    );
+  }
+
+  it("lists the saved versions with date and description", async () => {
+    const api = stubApi({
+      listVersions: vi.fn().mockResolvedValue({ ok: true, versions }),
+    });
+
+    await openHistory(api);
+
+    const items = await screen.findAllByRole("listitem");
+    expect(items).toHaveLength(2);
+    expect(
+      within(items[0]).getByText(/atualizar livro "Livro A"/),
+    ).toBeTruthy();
+    expect(within(items[0]).getByText(/15\/10\/2026/)).toBeTruthy();
+  });
+
+  it("says so when there are no versions yet", async () => {
+    await openHistory(stubApi());
+
+    expect(await screen.findByText(/nenhuma versão salva/i)).toBeTruthy();
+  });
+
+  it("shows the error when the history cannot be read", async () => {
+    await openHistory(
+      stubApi({
+        listVersions: vi
+          .fn()
+          .mockResolvedValue({ ok: false, error: "Falhou ao abrir." }),
+      }),
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Falhou ao abrir.",
+    );
+  });
+
+  it("goes back to a version, refreshes the lists and says the site was not changed", async () => {
+    const restored = {
+      ...validBook,
+      slug: "livro-antigo",
+      book: { ...validBook.book, slug: "livro-antigo", title: "Livro Antigo" },
+    } as BookEntry;
+    const api = stubApi({
+      listVersions: vi.fn().mockResolvedValue({ ok: true, versions }),
+      restoreVersion: vi.fn().mockResolvedValue({
+        ok: true,
+        versionCreated: true,
+        versions: [
+          { ...versions[0], id: "c".repeat(40), description: "voltar" },
+          ...versions,
+        ],
+        books: [restored],
+        posts: [],
+      }),
+    });
+    await openHistory(api);
+
+    const buttons = await screen.findAllByRole("button", {
+      name: /voltar para esta versão/i,
+    });
+    await userEvent.click(buttons[1]);
+
+    expect(api.restoreVersion).toHaveBeenCalledWith("a".repeat(40));
+    expect(await screen.findByRole("status")).toBeTruthy();
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    await userEvent.click(screen.getByRole("button", { name: /fechar/i }));
+    expect(await screen.findByText("Livro Antigo")).toBeTruthy();
+  });
+
+  it("shows the restore error and keeps the list", async () => {
+    const api = stubApi({
+      listVersions: vi.fn().mockResolvedValue({ ok: true, versions }),
+      restoreVersion: vi
+        .fn()
+        .mockResolvedValue({ ok: false, error: "Nada foi alterado." }),
+    });
+    await openHistory(api);
+
+    await userEvent.click(
+      (
+        await screen.findAllByRole("button", {
+          name: /voltar para esta versão/i,
+        })
+      )[0],
+    );
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Nada foi alterado.",
+    );
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
   });
 });
