@@ -11,3 +11,7 @@ export const SAVE_POST_CHANNEL = "post:save";
 export const IMPORT_POST_IMAGE_CHANNEL = "post-image:import";
 export const LIST_VERSIONS_CHANNEL = "versions:list";
 export const RESTORE_VERSION_CHANNEL = "version:restore";
+export const SITE_STATUS_CHANNEL = "site:status";
+export const SITE_SIGN_IN_CHANNEL = "site:sign-in";
+export const SITE_OPEN_CHANNEL = "site:open";
+export const SITE_DEVICE_CODE_EVENT = "site:device-code";

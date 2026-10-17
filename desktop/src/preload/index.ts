@@ -13,6 +13,10 @@ import {
   SAVE_POST_CHANNEL,
   SAVE_SINGLE_CHANNEL,
   SET_IDENTITY_CHANNEL,
+  SITE_DEVICE_CODE_EVENT,
+  SITE_OPEN_CHANNEL,
+  SITE_SIGN_IN_CHANNEL,
+  SITE_STATUS_CHANNEL,
 } from "../common/channels";
 import type { SingleFileKind } from "@shared/content-schema";
 import type { SingleFileValues } from "../common/single-file";
@@ -29,8 +33,11 @@ import type {
   SavePostResult,
   ReadSingleResult,
   SaveSingleResult,
+  DeviceCodePrompt,
   Identity,
   IdentityResult,
+  OpenSiteResult,
+  SignInResult,
   OpenRepositoryResult,
   SaveBookResult,
 } from "../common/types";
@@ -68,6 +75,21 @@ const api = {
     ipcRenderer.invoke(GET_IDENTITY_CHANNEL),
   setIdentity: (identity: Identity): Promise<IdentityResult> =>
     ipcRenderer.invoke(SET_IDENTITY_CHANNEL, identity),
+  siteStatus: (): Promise<{ signedIn: boolean }> =>
+    ipcRenderer.invoke(SITE_STATUS_CHANNEL),
+  /** Resolves when the author finishes (or abandons) the GitHub sign-in; the code to type arrives via onDeviceCode. */
+  signIn: (): Promise<SignInResult> => ipcRenderer.invoke(SITE_SIGN_IN_CHANNEL),
+  /** Returns the unsubscribe function. */
+  onDeviceCode: (
+    listener: (prompt: DeviceCodePrompt) => void,
+  ): (() => void) => {
+    const handler = (_event: unknown, prompt: DeviceCodePrompt) =>
+      listener(prompt);
+    ipcRenderer.on(SITE_DEVICE_CODE_EVENT, handler);
+    return () => ipcRenderer.removeListener(SITE_DEVICE_CODE_EVENT, handler);
+  },
+  openSite: (): Promise<OpenSiteResult> =>
+    ipcRenderer.invoke(SITE_OPEN_CHANNEL),
 };
 
 contextBridge.exposeInMainWorld("api", api);

@@ -102,8 +102,19 @@ async function blobOidAt(
   }
 }
 
+/** Committed content whose file was edited or deleted; compared by hash because the stat cache misses same-size edits. */
+async function hasEditedTrackedContent(dir: string): Promise<boolean> {
+  const tracked = await contentFilesAt(dir, "HEAD");
+  for (const filepath of tracked) {
+    if (!fs.existsSync(join(dir, filepath))) return true;
+    if (await hasChanged(dir, filepath)) return true;
+  }
+  return false;
+}
+
 /** Tracked content edited, deleted or staged but not committed. Untracked files do not count. */
-async function hasPendingChanges(dir: string): Promise<boolean> {
+export async function hasPendingChanges(dir: string): Promise<boolean> {
+  if (await hasEditedTrackedContent(dir)) return true;
   const rows = await git.statusMatrix({ fs, dir });
   return rows.some(
     ([filepath, head, workdir, stage]) =>

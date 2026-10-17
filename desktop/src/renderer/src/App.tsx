@@ -17,6 +17,7 @@ import type {
   OpenRepositoryResult,
   PostDraft,
   PostEntry,
+  SiteUpdate,
 } from "../../common/types";
 import { BookForm, type SaveOutcome } from "./BookForm";
 import { BookList } from "./BookList";
@@ -24,6 +25,7 @@ import { PostForm, type PostSaveResult } from "./PostForm";
 import { PostList } from "./PostList";
 import { HistoryScreen } from "./HistoryScreen";
 import { IdentityForm } from "./IdentityForm";
+import { SignInPanel } from "./SignInPanel";
 import { SingleFileForm } from "./SingleFileForm";
 
 type Screen =
@@ -40,7 +42,25 @@ const IMPORT_POST_IMAGE_FAILED =
   "Algo deu errado ao inserir a imagem. Tente de novo.";
 const SAVE_FAILED = "Algo deu errado ao salvar. Tente de novo.";
 const SAVE_POST_FAILED = "Algo deu errado ao salvar o post. Tente de novo.";
+const SITE_OPEN_FAILED = "Algo deu errado ao baixar o site. Tente de novo.";
+const SIGN_IN_FAILED = "Algo deu errado ao entrar no GitHub. Tente de novo.";
 const IDENTITY_FAILED = "Algo deu errado ao guardar seus dados. Tente de novo.";
+
+const UPDATE_NOTICES: Partial<Record<SiteUpdate, string>> = {
+  offline:
+    "Sem internet: mostrando a cópia do site que está neste computador. Você pode continuar editando e salvando.",
+  "kept-draft":
+    "Você tem um Rascunho em andamento, então o site não foi atualizado agora.",
+  diverged:
+    "O site no ar mudou desde a sua última Publicação. Isso será resolvido quando você publicar.",
+};
+
+type SiteState =
+  | { name: "checking" }
+  | { name: "sign-in"; notice: string | null }
+  | { name: "opening" }
+  | { name: "failed"; error: string }
+  | { name: "ready"; notice: string | null };
 
 export function App() {
   const [identity, setIdentity] = useState<Identity | null | undefined>(
@@ -50,6 +70,58 @@ export function App() {
   const [screen, setScreen] = useState<Screen>({ name: "list" });
   const [posts, setPosts] = useState<readonly PostEntry[]>([]);
   const [covers, setCovers] = useState<readonly string[]>([]);
+  const [site, setSite] = useState<SiteState>({ name: "checking" });
+
+  const openSite = async (): Promise<void> => {
+    setSite({ name: "opening" });
+    try {
+      const opened = await window.api.openSite();
+      if (!opened.ok) {
+        setSite(
+          opened.needsSignIn
+            ? { name: "sign-in", notice: opened.error }
+            : { name: "failed", error: opened.error },
+        );
+        return;
+      }
+      setResult({ ok: true, books: opened.books });
+      setScreen({ name: "list" });
+      setCovers(await window.api.listCovers().catch(() => []));
+      const listed = await window.api.listPosts().catch(() => null);
+      setPosts(listed?.ok ? listed.posts : []);
+      setSite({ name: "ready", notice: UPDATE_NOTICES[opened.update] ?? null });
+    } catch (error) {
+      console.error("openSite failed", error);
+      setSite({ name: "failed", error: SITE_OPEN_FAILED });
+    }
+  };
+
+  const handleSignIn = async (): Promise<string | null> => {
+    try {
+      const signedIn = await window.api.signIn();
+      if (!signedIn.ok) return signedIn.error;
+      void openSite();
+      return null;
+    } catch (error) {
+      console.error("signIn failed", error);
+      return SIGN_IN_FAILED;
+    }
+  };
+
+  useEffect(() => {
+    window.api
+      .siteStatus()
+      .then((status) => {
+        if (status.signedIn) void openSite();
+        else setSite({ name: "sign-in", notice: null });
+      })
+      .catch((error: unknown) => {
+        console.error("siteStatus failed", error);
+        setSite({ name: "sign-in", notice: null });
+      });
+    // Runs once on start-up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     window.api
@@ -149,6 +221,29 @@ export function App() {
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-8">
       <h1 className="text-2xl font-bold">Gestão do site</h1>
+      {site.name === "sign-in" && (
+        <SignInPanel onSignIn={handleSignIn} notice={site.notice} />
+      )}
+      {site.name === "opening" && <p aria-busy="true">Baixando o site…</p>}
+      {site.name === "failed" && (
+        <div className="space-y-2">
+          <p role="alert" className="text-red-700">
+            {site.error}
+          </p>
+          <button
+            type="button"
+            onClick={() => void openSite()}
+            className="rounded border border-indigo-600 px-3 py-1 text-indigo-700"
+          >
+            Tentar de novo
+          </button>
+        </div>
+      )}
+      {site.name === "ready" && site.notice !== null && (
+        <p role="status" className="rounded bg-amber-50 p-3 text-amber-900">
+          {site.notice}
+        </p>
+      )}
       <button
         type="button"
         onClick={handleOpen}

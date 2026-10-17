@@ -1,6 +1,14 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { BrowserWindow, app, dialog, ipcMain } from "electron";
+import {
+  BrowserWindow,
+  app,
+  dialog,
+  ipcMain,
+  safeStorage,
+  shell,
+} from "electron";
+import http from "isomorphic-git/http/node";
 import {
   GET_IDENTITY_CHANNEL,
   IMPORT_COVER_CHANNEL,
@@ -15,6 +23,10 @@ import {
   SAVE_POST_CHANNEL,
   SAVE_SINGLE_CHANNEL,
   SET_IDENTITY_CHANNEL,
+  SITE_DEVICE_CODE_EVENT,
+  SITE_OPEN_CHANNEL,
+  SITE_SIGN_IN_CHANNEL,
+  SITE_STATUS_CHANNEL,
 } from "../common/channels";
 import type { SingleFileKind } from "@shared/content-schema";
 import type { SingleFileValues } from "../common/single-file";
@@ -25,8 +37,26 @@ import type {
   PostDraft,
   PostImageInput,
 } from "../common/types";
+import {
+  GITHUB_CLIENT_ID,
+  GITHUB_LOGIN_ORIGIN,
+  SITE_CLONE_FOLDER,
+  SITE_REMOTE_URL,
+} from "./config";
+import { createGitHubClient } from "./github-client";
 import { createIdentityStore } from "./identity-store";
+import { openSyncedSite } from "./site-service";
+import { createSiteSession } from "./site-session";
+import { createSafeStorageVault } from "./token-vault";
 import { createWorkspace } from "./workspace";
+
+function isGitHubLoginUrl(value: string): boolean {
+  try {
+    return new URL(value).origin === GITHUB_LOGIN_ORIGIN;
+  } catch {
+    return false;
+  }
+}
 
 const WINDOW_WIDTH = 1100;
 const WINDOW_HEIGHT = 760;
@@ -84,6 +114,32 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   const identityStore = createIdentityStore(app.getPath("userData"));
   const workspace = createWorkspace(identityStore);
+  const siteSession = createSiteSession({
+    github: createGitHubClient({
+      clientId: GITHUB_CLIENT_ID,
+      fetch,
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    }),
+    vault: createSafeStorageVault(app.getPath("userData"), safeStorage),
+    http,
+    remoteUrl: SITE_REMOTE_URL,
+    cloneDir: join(app.getPath("userData"), SITE_CLONE_FOLDER),
+  });
+
+  ipcMain.handle(SITE_STATUS_CHANNEL, () => ({
+    signedIn: siteSession.isSignedIn(),
+  }));
+  ipcMain.handle(SITE_SIGN_IN_CHANNEL, (event) =>
+    siteSession.signIn((prompt) => {
+      event.sender.send(SITE_DEVICE_CODE_EVENT, prompt);
+      if (isGitHubLoginUrl(prompt.verificationUri)) {
+        void shell.openExternal(prompt.verificationUri);
+      }
+    }),
+  );
+  ipcMain.handle(SITE_OPEN_CHANNEL, () =>
+    openSyncedSite(siteSession, (path) => workspace.open(path)),
+  );
 
   ipcMain.handle(OPEN_REPOSITORY_CHANNEL, async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender);

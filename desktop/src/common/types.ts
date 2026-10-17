@@ -162,3 +162,27 @@ export type RestoreVersionResult =
       posts: readonly PostEntry[];
     }
   | { ok: false; error: string };
+
+/** What the author must do on github.com/login/device to finish signing in. */
+export interface DeviceCodePrompt {
+  userCode: string;
+  verificationUri: string;
+}
+
+export type SignInResult = { ok: true } | { ok: false; error: string };
+
+/** How the local copy of the site compares to the site on GitHub after opening. */
+export type SiteUpdate =
+  | "cloned"
+  | "updated"
+  | "up-to-date"
+  /** A Rascunho is pending, so the site was not refreshed. */
+  | "kept-draft"
+  /** Local versions and the site both changed; the Publicação step resolves it. */
+  | "diverged"
+  /** No connection: the local copy was opened as-is. */
+  | "offline";
+
+export type OpenSiteResult =
+  | { ok: true; update: SiteUpdate; books: readonly BookEntry[] }
+  | { ok: false; error: string; needsSignIn: boolean };

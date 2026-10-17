@@ -48,6 +48,11 @@ function stubApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     importPostImage: vi.fn().mockResolvedValue(null),
     listVersions: vi.fn().mockResolvedValue({ ok: true, versions: [] }),
     restoreVersion: vi.fn(),
+    siteStatus: vi.fn().mockResolvedValue({ signedIn: true }),
+    signIn: vi.fn(),
+    onDeviceCode: vi.fn().mockReturnValue(() => {}),
+    // Never settles: the legacy "Abrir pasta" tests run while the site is still downloading.
+    openSite: vi.fn().mockReturnValue(new Promise(() => {})),
     ...overrides,
   };
   window.api = api;
@@ -843,5 +848,153 @@ describe("App: history", () => {
       "Nada foi alterado.",
     );
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+});
+
+describe("App: signing in and downloading the site", () => {
+  it("opens the site on its own once signed in and says when it is offline", async () => {
+    stubApi({
+      openSite: vi.fn().mockResolvedValue({
+        ok: true,
+        update: "offline",
+        books: [validBook],
+      }),
+    });
+    render(<App />);
+
+    expect(await screen.findByText("Livro A")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/sem internet/i);
+  });
+
+  it("warns that the site was not refreshed while there is a Rascunho", async () => {
+    stubApi({
+      openSite: vi.fn().mockResolvedValue({
+        ok: true,
+        update: "kept-draft",
+        books: [validBook],
+      }),
+    });
+    render(<App />);
+
+    expect(await screen.findByRole("status")).toHaveTextContent(/rascunho/i);
+  });
+
+  it("stays quiet when the site is current", async () => {
+    stubApi({
+      openSite: vi.fn().mockResolvedValue({
+        ok: true,
+        update: "up-to-date",
+        books: [validBook],
+      }),
+    });
+    render(<App />);
+
+    await screen.findByText("Livro A");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("walks through the GitHub code, then downloads the site", async () => {
+    let showCode: (prompt: {
+      userCode: string;
+      verificationUri: string;
+    }) => void = () => {};
+    let finishSignIn: (result: { ok: true }) => void = () => {};
+    const api = stubApi({
+      siteStatus: vi.fn().mockResolvedValue({ signedIn: false }),
+      onDeviceCode: vi.fn().mockImplementation((listener) => {
+        showCode = listener;
+        return () => {};
+      }),
+      signIn: vi.fn().mockReturnValue(
+        new Promise((resolve) => {
+          finishSignIn = resolve;
+        }),
+      ),
+      openSite: vi.fn().mockResolvedValue({
+        ok: true,
+        update: "cloned",
+        books: [validBook],
+      }),
+    });
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /entrar com o github/i }),
+    );
+    showCode({
+      userCode: "ABCD-1234",
+      verificationUri: "https://github.com/login/device",
+    });
+
+    expect(await screen.findByText("ABCD-1234")).toBeInTheDocument();
+    expect(api.openSite).not.toHaveBeenCalled();
+
+    finishSignIn({ ok: true });
+
+    expect(await screen.findByText("Livro A")).toBeInTheDocument();
+    expect(api.openSite).toHaveBeenCalledTimes(1);
+  });
+
+  it("explains a failed sign-in and lets her try again", async () => {
+    stubApi({
+      siteStatus: vi.fn().mockResolvedValue({ signedIn: false }),
+      signIn: vi
+        .fn()
+        .mockResolvedValue({ ok: false, error: "Não foi possível entrar." }),
+    });
+    render(<App />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /entrar com o github/i }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível entrar.",
+    );
+    expect(
+      screen.getByRole("button", { name: /entrar com o github/i }),
+    ).toBeEnabled();
+  });
+
+  it("goes back to the sign-in when the saved access stopped working", async () => {
+    stubApi({
+      openSite: vi.fn().mockResolvedValue({
+        ok: false,
+        error: "Seu acesso ao GitHub não está mais valendo.",
+        needsSignIn: true,
+      }),
+    });
+    render(<App />);
+
+    expect(
+      await screen.findByRole("button", { name: /entrar com o github/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "não está mais valendo",
+    );
+  });
+
+  it("offers a retry when the first download fails", async () => {
+    const openSite = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        error: "Conecte-se à internet e tente de novo.",
+        needsSignIn: false,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        update: "cloned",
+        books: [validBook],
+      });
+    stubApi({ openSite });
+    render(<App />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("internet");
+    await userEvent.click(
+      screen.getByRole("button", { name: /tentar de novo/i }),
+    );
+
+    expect(await screen.findByText("Livro A")).toBeInTheDocument();
   });
 });
