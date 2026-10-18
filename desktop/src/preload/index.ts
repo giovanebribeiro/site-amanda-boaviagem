@@ -7,6 +7,8 @@ import {
   LIST_POSTS_CHANNEL,
   LIST_VERSIONS_CHANNEL,
   OPEN_REPOSITORY_CHANNEL,
+  PUBLISH_CHANNEL,
+  DEPLOY_STATE_CHANNEL,
   READ_SINGLE_CHANNEL,
   RESTORE_VERSION_CHANNEL,
   SAVE_BOOK_CHANNEL,
@@ -34,6 +36,8 @@ import type {
   ReadSingleResult,
   SaveSingleResult,
   DeviceCodePrompt,
+  DeployStateResult,
+  PublishResult,
   Identity,
   IdentityResult,
   OpenSiteResult,
@@ -90,6 +94,10 @@ const api = {
   },
   openSite: (): Promise<OpenSiteResult> =>
     ipcRenderer.invoke(SITE_OPEN_CHANNEL),
+  /** Sends the saved versions to the site; offline it fails without losing anything. */
+  publish: (): Promise<PublishResult> => ipcRenderer.invoke(PUBLISH_CHANNEL),
+  deployState: (sha: string): Promise<DeployStateResult> =>
+    ipcRenderer.invoke(DEPLOY_STATE_CHANNEL, sha),
 };
 
 contextBridge.exposeInMainWorld("api", api);

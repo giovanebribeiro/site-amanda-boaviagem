@@ -21,6 +21,7 @@ import type {
 } from "../../common/types";
 import { BookForm, type SaveOutcome } from "./BookForm";
 import { BookList } from "./BookList";
+import { PublishPanel } from "./PublishPanel";
 import { PostForm, type PostSaveResult } from "./PostForm";
 import { PostList } from "./PostList";
 import { HistoryScreen } from "./HistoryScreen";
@@ -238,6 +239,13 @@ export function App() {
             Tentar de novo
           </button>
         </div>
+      )}
+      {site.name === "ready" && (
+        <PublishPanel
+          onNeedsSignIn={(message) =>
+            setSite({ name: "sign-in", notice: message })
+          }
+        />
       )}
       {site.name === "ready" && site.notice !== null && (
         <p role="status" className="rounded bg-amber-50 p-3 text-amber-900">

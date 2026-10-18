@@ -186,3 +186,19 @@ export type SiteUpdate =
 export type OpenSiteResult =
   | { ok: true; update: SiteUpdate; books: readonly BookEntry[] }
   | { ok: false; error: string; needsSignIn: boolean };
+
+/** Where the site stands after a Publicação: sent, being built, live, or failed. */
+export type DeployState = "building" | "live" | "failed";
+
+export type PublishResult =
+  | {
+      ok: true;
+      /** The commit now on the site; its workflow run is what the screen follows. */
+      sha: string;
+      /** False when there was nothing new to send. */
+      sent: boolean;
+    }
+  | { ok: false; error: string; needsSignIn: boolean };
+
+export type DeployStateResult =
+  { ok: true; state: DeployState } | { ok: false; error: string };

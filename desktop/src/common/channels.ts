@@ -15,3 +15,5 @@ export const SITE_STATUS_CHANNEL = "site:status";
 export const SITE_SIGN_IN_CHANNEL = "site:sign-in";
 export const SITE_OPEN_CHANNEL = "site:open";
 export const SITE_DEVICE_CODE_EVENT = "site:device-code";
+export const PUBLISH_CHANNEL = "site:publish";
+export const DEPLOY_STATE_CHANNEL = "site:deploy-state";

@@ -53,6 +53,8 @@ function stubApi(overrides: Partial<DesktopApi> = {}): DesktopApi {
     onDeviceCode: vi.fn().mockReturnValue(() => {}),
     // Never settles: the legacy "Abrir pasta" tests run while the site is still downloading.
     openSite: vi.fn().mockReturnValue(new Promise(() => {})),
+    publish: vi.fn(),
+    deployState: vi.fn(),
     ...overrides,
   };
   window.api = api;
@@ -996,5 +998,122 @@ describe("App: signing in and downloading the site", () => {
     );
 
     expect(await screen.findByText("Livro A")).toBeInTheDocument();
+  });
+});
+
+describe("App: publishing", () => {
+  const SHA = "c".repeat(40);
+
+  async function openReady(
+    overrides: Partial<DesktopApi>,
+  ): Promise<DesktopApi> {
+    const api = stubApi({
+      openSite: vi.fn().mockResolvedValue({
+        ok: true,
+        update: "up-to-date",
+        books: [validBook],
+      }),
+      ...overrides,
+    });
+    render(<App />);
+    await screen.findByText("Livro A");
+    return api;
+  }
+
+  const publish = () =>
+    userEvent.click(screen.getByRole("button", { name: /^publicar$/i }));
+
+  it("sends, then follows the build until the site is live", async () => {
+    const deployState = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, state: "building" })
+      .mockResolvedValue({ ok: true, state: "live" });
+    const api = await openReady({
+      publish: vi.fn().mockResolvedValue({ ok: true, sha: SHA, sent: true }),
+      deployState,
+    });
+
+    await publish();
+
+    expect(await screen.findByText(/construindo/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/no ar/i, {}, { timeout: 4000 }),
+    ).toBeInTheDocument();
+    expect(api.deployState).toHaveBeenCalledWith(SHA);
+  });
+
+  it("says it is sending while the versions go up", async () => {
+    await openReady({
+      publish: vi.fn().mockReturnValue(new Promise(() => {})),
+    });
+
+    await publish();
+
+    expect(await screen.findByText(/enviando/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^publicar$/i })).toBeDisabled();
+  });
+
+  it("explains a failed build and that the previous site stays up", async () => {
+    await openReady({
+      publish: vi.fn().mockResolvedValue({ ok: true, sha: SHA, sent: true }),
+      deployState: vi.fn().mockResolvedValue({ ok: true, state: "failed" }),
+    });
+
+    await publish();
+
+    expect(await screen.findByText(/falhou/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/site anterior continua no ar/i),
+    ).toBeInTheDocument();
+  });
+
+  it("warns when offline and lets her try again", async () => {
+    const publishFn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        error: "Sem internet: nada foi perdido.",
+        needsSignIn: false,
+      })
+      .mockResolvedValue({ ok: true, sha: SHA, sent: true });
+    await openReady({
+      publish: publishFn,
+      deployState: vi.fn().mockResolvedValue({ ok: true, state: "live" }),
+    });
+
+    await publish();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sem internet");
+
+    await publish();
+    expect(await screen.findByText(/no ar/i)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("asks to sign in again when the access was revoked", async () => {
+    await openReady({
+      publish: vi.fn().mockResolvedValue({
+        ok: false,
+        error: "Seu acesso ao GitHub não está mais valendo. Entre de novo.",
+        needsSignIn: true,
+      }),
+    });
+
+    await publish();
+
+    expect(
+      await screen.findByRole("button", { name: /entrar com o github/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("says when there was nothing new to send", async () => {
+    await openReady({
+      publish: vi.fn().mockResolvedValue({ ok: true, sha: SHA, sent: false }),
+    });
+
+    await publish();
+
+    expect(
+      await screen.findByText(/nada novo para publicar/i),
+    ).toBeInTheDocument();
   });
 });

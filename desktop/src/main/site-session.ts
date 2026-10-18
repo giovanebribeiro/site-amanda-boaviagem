@@ -4,6 +4,7 @@ import { join } from "node:path";
 import git, { type HttpClient } from "isomorphic-git";
 import type {
   DeviceCodePrompt,
+  PublishResult,
   SignInResult,
   SiteUpdate,
 } from "../common/types";
@@ -18,6 +19,10 @@ const NEEDS_INTERNET_MESSAGE =
   "Não foi possível baixar o site. Conecte-se à internet e tente de novo.";
 const TOKEN_REJECTED_MESSAGE =
   "Seu acesso ao GitHub não está mais valendo. Entre de novo.";
+const PUBLISH_NEEDS_INTERNET_MESSAGE =
+  "Sem internet: nada foi perdido. Suas versões salvas continuam neste computador; tente publicar de novo quando se conectar.";
+const PUBLISH_SITE_CHANGED_MESSAGE =
+  "O site mudou desde a sua última Publicação. Por enquanto, não foi possível publicar.";
 const NOT_SIGNED_IN_MESSAGE = "Entre com a sua conta do GitHub para continuar.";
 
 export interface DeviceCode extends DeviceCodePrompt {
@@ -57,6 +62,8 @@ export interface SiteSession {
   signIn(onPrompt: (prompt: DeviceCodePrompt) => void): Promise<SignInResult>;
   /** Clones on the first run; afterwards refreshes silently unless a Rascunho is pending. */
   open(): Promise<SiteOpenOutcome>;
+  /** Sends the saved versions to the site. Never touches the Rascunho; offline leaves everything as it was. */
+  publish(): Promise<PublishResult>;
 }
 
 class TokenRejectedError extends Error {
@@ -74,6 +81,13 @@ function isAuthFailure(error: unknown): boolean {
     return status === 401 || status === 403;
   }
   return false;
+}
+
+function isRejectedPush(error: unknown): boolean {
+  return (
+    error instanceof git.Errors.PushRejectedError ||
+    (error instanceof git.Errors.GitPushError && error.data !== undefined)
+  );
 }
 
 /** Logs the failure kind only: error text from the transport could echo credentials. */
@@ -130,6 +144,24 @@ export function createSiteSession(options: SiteSessionOptions): SiteSession {
     return (await headOid()) === before ? "up-to-date" : "updated";
   }
 
+  async function pushSavedVersions(token: string): Promise<PublishResult> {
+    const sha = await headOid();
+    const remoteSha = await git
+      .resolveRef({ fs, dir: cloneDir, ref: `refs/remotes/origin/${BRANCH}` })
+      .catch(() => null);
+    if (remoteSha === sha) return { ok: true, sha, sent: false };
+    await git.push({
+      fs,
+      http,
+      dir: cloneDir,
+      remote: "origin",
+      ref: BRANCH,
+      remoteRef: BRANCH,
+      ...authFor(token),
+    });
+    return { ok: true, sha, sent: true };
+  }
+
   return {
     isSignedIn: () => vault.get() !== null,
 
@@ -170,6 +202,33 @@ export function createSiteSession(options: SiteSessionOptions): SiteSession {
         }
         console.error("Failed to open the site", describeForLog(error));
         return { ok: false, error: NEEDS_INTERNET_MESSAGE, needsSignIn: false };
+      }
+    },
+
+    async publish() {
+      const token = vault.get();
+      if (token === null) {
+        return { ok: false, error: NOT_SIGNED_IN_MESSAGE, needsSignIn: true };
+      }
+      try {
+        return await pushSavedVersions(token);
+      } catch (error) {
+        if (isAuthFailure(error)) {
+          vault.clear();
+          return {
+            ok: false,
+            error: TOKEN_REJECTED_MESSAGE,
+            needsSignIn: true,
+          };
+        }
+        console.error("Failed to publish", describeForLog(error));
+        return {
+          ok: false,
+          error: isRejectedPush(error)
+            ? PUBLISH_SITE_CHANGED_MESSAGE
+            : PUBLISH_NEEDS_INTERNET_MESSAGE,
+          needsSignIn: false,
+        };
       }
     },
   };

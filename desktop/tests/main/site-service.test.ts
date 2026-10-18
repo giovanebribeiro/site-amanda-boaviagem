@@ -6,6 +6,7 @@ const stubSession = (open: SiteSession["open"]): SiteSession => ({
   isSignedIn: () => true,
   signIn: vi.fn(),
   open,
+  publish: vi.fn(),
 });
 
 describe("openSyncedSite", () => {

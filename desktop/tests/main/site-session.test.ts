@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import {
   existsSync,
@@ -243,6 +244,114 @@ describe("site session", () => {
       await session().signIn(() => {});
       await session().open();
       await session({ http: offlineHttp }).open();
+
+      const logged = JSON.stringify(spies.flatMap((spy) => spy.mock.calls));
+      expect(logged).not.toContain(TOKEN);
+      expect(logged).not.toContain("gho_revoked");
+    });
+  });
+  describe("publishing", () => {
+    const saveLocalVersion = async (content = "local\n") => {
+      writeFileSync(join(cloneDir, BOOK), content);
+      await git.add({ fs, dir: cloneDir, filepath: BOOK });
+      return git.commit({ fs, dir: cloneDir, message: "local", author });
+    };
+    const remoteHead = () =>
+      execFileSync("git", ["rev-parse", "master"], {
+        cwd: remote.bareDir,
+        encoding: "utf8",
+      }).trim();
+
+    it("sends the saved versions to the site and returns the sent commit", async () => {
+      const s = session();
+      await s.open();
+      const sha = await saveLocalVersion();
+
+      const result = await s.publish();
+
+      expect(result).toEqual({ ok: true, sha, sent: true });
+      expect(remoteHead()).toBe(sha);
+    });
+
+    it("reports nothing sent when there are no new versions", async () => {
+      const s = session();
+      await s.open();
+
+      const result = await s.publish();
+
+      expect(result).toMatchObject({ ok: true, sent: false });
+    });
+
+    it("keeps the versions and warns when there is no internet", async () => {
+      await session().open();
+      const sha = await saveLocalVersion();
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await session({ http: offlineHttp }).publish();
+
+      expect(result).toMatchObject({
+        ok: false,
+        needsSignIn: false,
+        error: expect.stringContaining("internet"),
+      });
+      expect(await git.resolveRef({ fs, dir: cloneDir, ref: "HEAD" })).toBe(
+        sha,
+      );
+    });
+
+    it("can try again after the connection is back", async () => {
+      await session().open();
+      const sha = await saveLocalVersion();
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      await session({ http: offlineHttp }).publish();
+
+      const result = await session().publish();
+
+      expect(result).toEqual({ ok: true, sha, sent: true });
+      expect(remoteHead()).toBe(sha);
+    });
+
+    it("asks to sign in when there is no token", async () => {
+      const result = await session({ vault: memoryVault() }).publish();
+      expect(result).toMatchObject({ ok: false, needsSignIn: true });
+    });
+
+    it("asks to sign in again when the token was revoked, and forgets it", async () => {
+      await session().open();
+      await saveLocalVersion();
+      const vault = memoryVault("gho_revoked");
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await session({ vault }).publish();
+
+      expect(result).toMatchObject({ ok: false, needsSignIn: true });
+      expect(vault.get()).toBeNull();
+    });
+
+    it("does not overwrite the site when it changed meanwhile", async () => {
+      await session().open();
+      await saveLocalVersion();
+      remote.pushFile(BOOK, "alguem mudou\n");
+      const before = remoteHead();
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+      const result = await session().publish();
+
+      expect(result).toMatchObject({ ok: false, needsSignIn: false });
+      expect(remoteHead()).toBe(before);
+    });
+
+    it("never writes the token to the logs", async () => {
+      await session().open();
+      await saveLocalVersion();
+      const spies = [
+        vi.spyOn(console, "log").mockImplementation(() => {}),
+        vi.spyOn(console, "error").mockImplementation(() => {}),
+        vi.spyOn(console, "warn").mockImplementation(() => {}),
+      ];
+
+      await session({ http: offlineHttp }).publish();
+      await session({ vault: memoryVault("gho_revoked") }).publish();
 
       const logged = JSON.stringify(spies.flatMap((spy) => spy.mock.calls));
       expect(logged).not.toContain(TOKEN);

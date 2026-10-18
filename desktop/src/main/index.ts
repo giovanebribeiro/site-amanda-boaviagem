@@ -16,7 +16,9 @@ import {
   LIST_COVERS_CHANNEL,
   LIST_POSTS_CHANNEL,
   LIST_VERSIONS_CHANNEL,
+  DEPLOY_STATE_CHANNEL,
   OPEN_REPOSITORY_CHANNEL,
+  PUBLISH_CHANNEL,
   READ_SINGLE_CHANNEL,
   RESTORE_VERSION_CHANNEL,
   SAVE_BOOK_CHANNEL,
@@ -40,9 +42,12 @@ import type {
 import {
   GITHUB_CLIENT_ID,
   GITHUB_LOGIN_ORIGIN,
+  PUBLISH_WORKFLOW_FILE,
+  SITE_REPO,
   SITE_CLONE_FOLDER,
   SITE_REMOTE_URL,
 } from "./config";
+import { createDeployStatusClient } from "./deploy-status";
 import { createGitHubClient } from "./github-client";
 import { createIdentityStore } from "./identity-store";
 import { openSyncedSite } from "./site-service";
@@ -57,6 +62,9 @@ function isGitHubLoginUrl(value: string): boolean {
     return false;
   }
 }
+
+const DEPLOY_STATE_FAILED_MESSAGE =
+  "Não foi possível consultar o estado da publicação agora. Suas versões já foram enviadas.";
 
 const WINDOW_WIDTH = 1100;
 const WINDOW_HEIGHT = 760;
@@ -114,13 +122,20 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   const identityStore = createIdentityStore(app.getPath("userData"));
   const workspace = createWorkspace(identityStore);
+  const vault = createSafeStorageVault(app.getPath("userData"), safeStorage);
+  const deployStatus = createDeployStatusClient({
+    fetch,
+    getToken: () => vault.get(),
+    repo: SITE_REPO,
+    workflowFile: PUBLISH_WORKFLOW_FILE,
+  });
   const siteSession = createSiteSession({
     github: createGitHubClient({
       clientId: GITHUB_CLIENT_ID,
       fetch,
       sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     }),
-    vault: createSafeStorageVault(app.getPath("userData"), safeStorage),
+    vault,
     http,
     remoteUrl: SITE_REMOTE_URL,
     cloneDir: join(app.getPath("userData"), SITE_CLONE_FOLDER),
@@ -140,6 +155,22 @@ app.whenReady().then(() => {
   ipcMain.handle(SITE_OPEN_CHANNEL, () =>
     openSyncedSite(siteSession, (path) => workspace.open(path)),
   );
+
+  ipcMain.handle(PUBLISH_CHANNEL, () => siteSession.publish());
+  ipcMain.handle(DEPLOY_STATE_CHANNEL, async (_event, sha: unknown) => {
+    if (typeof sha !== "string" || !/^[0-9a-f]{40}$/.test(sha)) {
+      return { ok: false, error: DEPLOY_STATE_FAILED_MESSAGE };
+    }
+    try {
+      return { ok: true, state: await deployStatus.stateOf(sha) };
+    } catch (error) {
+      console.error(
+        "Failed to read deploy state",
+        error instanceof Error ? error.name : typeof error,
+      );
+      return { ok: false, error: DEPLOY_STATE_FAILED_MESSAGE };
+    }
+  });
 
   ipcMain.handle(OPEN_REPOSITORY_CHANNEL, async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender);
