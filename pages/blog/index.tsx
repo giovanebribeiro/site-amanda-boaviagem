@@ -6,16 +6,19 @@ import Footer from "@/components/layout/Footer";
 import PostCard from "@/components/blog/PostCard";
 import { getAllPosts } from "@/lib/blog";
 import { getContactData } from "@/lib/contact";
-import type { BlogPost, ContactData } from "@/types";
+import { getSiteData } from "@/lib/site";
+import type { BlogPost, ContactData, SiteData } from "@/types";
 
 interface BlogIndexProps {
   posts: BlogPost[];
   contact: ContactData;
+  site: SiteData;
 }
 
 export default function BlogIndex({
   posts,
   contact,
+  site,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
   return (
     <>
@@ -27,17 +30,16 @@ export default function BlogIndex({
         />
       </Head>
 
-      <Header />
+      <Header slogan={site.slogan} />
 
       <main className="min-h-screen bg-background text-foreground pt-16">
         {/* Hero da página */}
         <section className="py-20 px-4 text-center">
           <h1 className="font-serif text-5xl font-bold text-foreground mb-4">
-            Blog
+            {site.blogTitle}
           </h1>
           <p className="font-sans text-foreground/60 max-w-xl mx-auto">
-            Reflexões literárias, bastidores e novidades do universo de Amanda
-            Boaviagem.
+            {site.blogSubtitle}
           </p>
         </section>
 
@@ -67,12 +69,12 @@ export default function BlogIndex({
         </div>
       </main>
 
-      <Footer contact={contact} />
+      <Footer contact={contact} slogan={site.slogan} />
     </>
   );
 }
 
 export const getStaticProps: GetStaticProps<BlogIndexProps> = async () => {
   const posts = getAllPosts();
-  return { props: { posts, contact: getContactData() } };
+  return { props: { posts, contact: getContactData(), site: getSiteData() } };
 };

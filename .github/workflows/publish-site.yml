@@ -1,0 +1,44 @@
+# Publica o site: testes e build primeiro, deploy na Netlify só se tudo passar.
+# O build automático da Netlify deve ficar desligado (ADR 0002); este workflow é o único caminho para o ar.
+name: Publish site
+
+on:
+  push:
+    branches: [master]
+    # Mudança só no app (desktop/) ou só em documentação não republica o site.
+    # shared/ fica de fora da lista de ignorados: o site também o usa.
+    paths-ignore:
+      - "desktop/**"
+      - "docs/**"
+      - "*.md"
+      - ".github/workflows/desktop-tests.yml"
+
+permissions:
+  contents: read
+
+# Uma publicação por vez; a mais nova não cancela uma em andamento no meio do deploy.
+concurrency:
+  group: publish-site
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: npx --yes netlify-cli@17 deploy --prod --dir=out --no-build

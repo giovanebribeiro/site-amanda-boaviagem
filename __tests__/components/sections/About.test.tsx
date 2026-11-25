@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import About from "@/components/sections/About";
 import type { AboutData } from "@/types";
+import { siteFixture } from "../../fixtures/site";
 
 const about: AboutData = {
   title: "Sobre mim",
@@ -11,33 +12,33 @@ const about: AboutData = {
 
 describe("About", () => {
   it("renders without crashing", () => {
-    render(<About id="sobre" about={about} />);
+    render(<About id="sobre" about={about} site={siteFixture} />);
   });
 
   it("renders section title", () => {
-    render(<About id="sobre" about={about} />);
+    render(<About id="sobre" about={about} site={siteFixture} />);
     expect(screen.getByText(/sobre mim/i)).toBeInTheDocument();
   });
 
   it("renders biography text", () => {
-    render(<About id="sobre" about={about} />);
+    render(<About id="sobre" about={about} site={siteFixture} />);
     expect(screen.getByText(/amanda boaviagem é escritora/i)).toBeInTheDocument();
   });
 
   it("renders the content received by props", () => {
-    render(<About id="sobre" about={{ ...about, title: "Outro titulo", body: "Outro corpo" }} />);
+    render(<About id="sobre" about={{ ...about, title: "Outro titulo", body: "Outro corpo" }} site={siteFixture} />);
     expect(screen.getByText("Outro titulo")).toBeInTheDocument();
     expect(screen.getByText("Outro corpo")).toBeInTheDocument();
   });
 
   it("renders the author photo", () => {
-    render(<About id="sobre" about={about} />);
-    const img = screen.getByRole("img", { name: /amanda boaviagem/i });
+    render(<About id="sobre" about={about} site={siteFixture} />);
+    const img = screen.getByRole("img", { name: siteFixture.aboutPhotoAlt });
     expect(img).toBeInTheDocument();
   });
 
   it("renders with the given id attribute", () => {
-    const { container } = render(<About id="sobre" about={about} />);
+    const { container } = render(<About id="sobre" about={about} site={siteFixture} />);
     expect(container.querySelector("#sobre")).toBeInTheDocument();
   });
 });

@@ -1,0 +1,260 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import {
+  BrowserWindow,
+  app,
+  dialog,
+  ipcMain,
+  safeStorage,
+  shell,
+} from "electron";
+import http from "isomorphic-git/http/node";
+import {
+  GET_IDENTITY_CHANNEL,
+  IMPORT_COVER_CHANNEL,
+  IMPORT_POST_IMAGE_CHANNEL,
+  LIST_COVERS_CHANNEL,
+  LIST_POSTS_CHANNEL,
+  LIST_VERSIONS_CHANNEL,
+  DEPLOY_STATE_CHANNEL,
+  OPEN_REPOSITORY_CHANNEL,
+  PUBLISH_CHANNEL,
+  READ_SINGLE_CHANNEL,
+  RESTORE_VERSION_CHANNEL,
+  SAVE_BOOK_CHANNEL,
+  SAVE_POST_CHANNEL,
+  SAVE_SINGLE_CHANNEL,
+  SET_IDENTITY_CHANNEL,
+  SITE_DEVICE_CODE_EVENT,
+  SITE_OPEN_CHANNEL,
+  SITE_SIGN_IN_CHANNEL,
+  SITE_STATUS_CHANNEL,
+} from "../common/channels";
+import type { SingleFileKind } from "@shared/content-schema";
+import type { SingleFileValues } from "../common/single-file";
+import type {
+  BookDraft,
+  CoverTarget,
+  Identity,
+  PostDraft,
+  PostImageInput,
+} from "../common/types";
+import {
+  GITHUB_CLIENT_ID,
+  GITHUB_LOGIN_ORIGIN,
+  PUBLISH_WORKFLOW_FILE,
+  SITE_REPO,
+  SITE_CLONE_FOLDER,
+  SITE_REMOTE_URL,
+} from "./config";
+import { createDeployStatusClient } from "./deploy-status";
+import { createGitHubClient } from "./github-client";
+import { createIdentityStore } from "./identity-store";
+import { openSyncedSite } from "./site-service";
+import { createSiteSession } from "./site-session";
+import { createSafeStorageVault } from "./token-vault";
+import { createWorkspace } from "./workspace";
+
+function isGitHubLoginUrl(value: string): boolean {
+  try {
+    return new URL(value).origin === GITHUB_LOGIN_ORIGIN;
+  } catch {
+    return false;
+  }
+}
+
+const DEPLOY_STATE_FAILED_MESSAGE =
+  "Não foi possível consultar o estado da publicação agora. Suas versões já foram enviadas.";
+
+const WINDOW_WIDTH = 1100;
+const WINDOW_HEIGHT = 760;
+
+async function pickFolder(window: BrowserWindow): Promise<string | null> {
+  const { canceled, filePaths } = await dialog.showOpenDialog(window, {
+    title: "Escolha a pasta do site",
+    properties: ["openDirectory"],
+  });
+  return canceled || filePaths.length === 0 ? null : filePaths[0];
+}
+
+const COVER_FILE_FILTER = {
+  name: "Imagens",
+  extensions: ["png", "jpg", "jpeg", "gif"],
+};
+
+async function pickImageFile(
+  window: BrowserWindow,
+  title: string,
+): Promise<string | null> {
+  const { canceled, filePaths } = await dialog.showOpenDialog(window, {
+    title,
+    properties: ["openFile"],
+    filters: [COVER_FILE_FILTER],
+  });
+  return canceled || filePaths.length === 0 ? null : filePaths[0];
+}
+
+function createWindow(): BrowserWindow {
+  const window = new BrowserWindow({
+    width: WINDOW_WIDTH,
+    height: WINDOW_HEIGHT,
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event, url) => {
+    if (url !== window.webContents.getURL()) event.preventDefault();
+  });
+
+  if (process.env.ELECTRON_RENDERER_URL) {
+    void window.loadURL(process.env.ELECTRON_RENDERER_URL);
+  } else {
+    void window.loadFile(join(__dirname, "../renderer/index.html"));
+  }
+  return window;
+}
+
+app.whenReady().then(() => {
+  const identityStore = createIdentityStore(app.getPath("userData"));
+  const workspace = createWorkspace(identityStore);
+  const vault = createSafeStorageVault(app.getPath("userData"), safeStorage);
+  const deployStatus = createDeployStatusClient({
+    fetch,
+    getToken: () => vault.get(),
+    repo: SITE_REPO,
+    workflowFile: PUBLISH_WORKFLOW_FILE,
+  });
+  const siteSession = createSiteSession({
+    github: createGitHubClient({
+      clientId: GITHUB_CLIENT_ID,
+      fetch,
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    }),
+    vault,
+    http,
+    remoteUrl: SITE_REMOTE_URL,
+    cloneDir: join(app.getPath("userData"), SITE_CLONE_FOLDER),
+  });
+
+  ipcMain.handle(SITE_STATUS_CHANNEL, () => ({
+    signedIn: siteSession.isSignedIn(),
+  }));
+  ipcMain.handle(SITE_SIGN_IN_CHANNEL, (event) =>
+    siteSession.signIn((prompt) => {
+      event.sender.send(SITE_DEVICE_CODE_EVENT, prompt);
+      if (isGitHubLoginUrl(prompt.verificationUri)) {
+        void shell.openExternal(prompt.verificationUri);
+      }
+    }),
+  );
+  ipcMain.handle(SITE_OPEN_CHANNEL, () =>
+    openSyncedSite(siteSession, (path) => workspace.open(path)),
+  );
+
+  ipcMain.handle(PUBLISH_CHANNEL, () => siteSession.publish());
+  ipcMain.handle(DEPLOY_STATE_CHANNEL, async (_event, sha: unknown) => {
+    if (typeof sha !== "string" || !/^[0-9a-f]{40}$/.test(sha)) {
+      return { ok: false, error: DEPLOY_STATE_FAILED_MESSAGE };
+    }
+    try {
+      return { ok: true, state: await deployStatus.stateOf(sha) };
+    } catch (error) {
+      console.error(
+        "Failed to read deploy state",
+        error instanceof Error ? error.name : typeof error,
+      );
+      return { ok: false, error: DEPLOY_STATE_FAILED_MESSAGE };
+    }
+  });
+
+  ipcMain.handle(OPEN_REPOSITORY_CHANNEL, async (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) return null;
+    return workspace.open(await pickFolder(window));
+  });
+  ipcMain.handle(LIST_COVERS_CHANNEL, () => workspace.covers());
+  ipcMain.handle(IMPORT_COVER_CHANNEL, async (event, target: CoverTarget) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) return null;
+    const file = await pickImageFile(window, "Escolha a imagem da capa");
+    if (file === null) return null;
+    try {
+      const bytes = await readFile(file);
+      return await workspace.importCover({
+        bytes,
+        slug: target?.slug ?? null,
+        title: target?.title ?? "",
+      });
+    } catch (error) {
+      console.error("Failed to read cover file", error);
+      return {
+        ok: false,
+        error: "Não foi possível ler o arquivo escolhido. Tente de novo.",
+      };
+    }
+  });
+  ipcMain.handle(
+    IMPORT_POST_IMAGE_CHANNEL,
+    async (event, input: PostImageInput) => {
+      const window = BrowserWindow.fromWebContents(event.sender);
+      if (!window) return null;
+      // The alt text is checked before the picker opens, so a refusal costs nothing.
+      const refusal = workspace.checkPostImage(input);
+      if (refusal) return refusal;
+      const file = await pickImageFile(window, "Escolha a imagem do post");
+      if (file === null) return null;
+      try {
+        const bytes = await readFile(file);
+        return await workspace.importPostImage({
+          bytes,
+          slug: input?.slug ?? null,
+          title: input?.title ?? "",
+          alt: input?.alt ?? "",
+        });
+      } catch (error) {
+        console.error("Failed to read post image file", error);
+        return {
+          ok: false,
+          error: "Não foi possível ler o arquivo escolhido. Tente de novo.",
+        };
+      }
+    },
+  );
+  ipcMain.handle(SAVE_BOOK_CHANNEL, (_event, draft: BookDraft) =>
+    workspace.saveBook(draft),
+  );
+  ipcMain.handle(LIST_POSTS_CHANNEL, () => workspace.listPosts());
+  ipcMain.handle(SAVE_POST_CHANNEL, (_event, draft: PostDraft) =>
+    workspace.savePost(draft),
+  );
+  ipcMain.handle(READ_SINGLE_CHANNEL, (_event, kind: SingleFileKind) =>
+    workspace.readSingle(kind),
+  );
+  ipcMain.handle(
+    SAVE_SINGLE_CHANNEL,
+    (_event, kind: SingleFileKind, values: SingleFileValues) =>
+      workspace.saveSingle(kind, values),
+  );
+  ipcMain.handle(LIST_VERSIONS_CHANNEL, () => workspace.listVersions());
+  ipcMain.handle(RESTORE_VERSION_CHANNEL, (_event, versionId: string) =>
+    workspace.restoreVersion(versionId),
+  );
+  ipcMain.handle(GET_IDENTITY_CHANNEL, () => identityStore.read());
+  ipcMain.handle(SET_IDENTITY_CHANNEL, (_event, identity: Identity) =>
+    identityStore.write(identity),
+  );
+
+  createWindow();
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});

@@ -8,8 +8,10 @@ import Contact from "@/components/sections/Contact";
 import Hero from "@/components/sections/Hero";
 import { getAboutData } from "@/lib/about";
 import { getBooksSortedByDate } from "@/lib/books";
+import { findStaleToRelease, pickFeaturedBook } from "@/lib/featured-book";
 import { getContactData } from "@/lib/contact";
-import type { AboutData, Book, ContactData } from "@/types";
+import { getSiteData } from "@/lib/site";
+import type { AboutData, Book, ContactData, SiteData } from "@/types";
 
 // SSR desabilitado — Header usa useRouter (client-only hook)
 const Header = dynamic(() => import("@/components/layout/Header"), { ssr: false });
@@ -23,35 +25,46 @@ interface HomeProps {
   books: Book[];
   about: AboutData;
   contact: ContactData;
+  site: SiteData;
 }
 
-export const getStaticProps: GetStaticProps<HomeProps> = async () => ({
-  props: {
-    books: getBooksSortedByDate(),
-    about: getAboutData(),
-    contact: getContactData(),
-  },
-});
+export const getStaticProps: GetStaticProps<HomeProps> = async () => {
+  const books = getBooksSortedByDate();
+  const today = new Date().toISOString().slice(0, 10);
+  for (const book of findStaleToRelease(books, today)) {
+    console.warn(
+      `[content] books/${book.slug}.md still has toRelease: true but releaseDate ${book.releaseDate} has passed. Remove the flag to show the buy links.`,
+    );
+  }
+  return {
+    props: {
+      books,
+      about: getAboutData(),
+      contact: getContactData(),
+      site: getSiteData(),
+    },
+  };
+};
 
-export default function Home({ books, about, contact }: HomeProps) {
+export default function Home({ books, about, contact, site }: HomeProps) {
   return (
     <>
       <Head>
-        <title>Amanda Boaviagem | Escritora da Esperança</title>
+        <title>{`Amanda Boaviagem | ${site.slogan}`}</title>
         <meta
           name="description"
-          content="Site oficial de Amanda Boaviagem, escritora da esperança."
+          content={`Site oficial de Amanda Boaviagem, ${site.slogan.toLowerCase()}.`}
         />
       </Head>
-      <Header />
+      <Header slogan={site.slogan} />
       <main className="bg-background text-foreground">
-        <Hero id="inicio" />
-        <UltimoLancamento book={books[0] ?? null} />
-        <Books id="livros" books={books} />
-        <About id="sobre" about={about} />
-        <Contact id="contato" contact={contact} />
+        <Hero id="inicio" site={site} />
+        <UltimoLancamento book={pickFeaturedBook(books)} site={site} />
+        <Books id="livros" books={books} site={site} />
+        <About id="sobre" about={about} site={site} />
+        <Contact id="contato" contact={contact} site={site} />
       </main>
-      <Footer contact={contact} />
+      <Footer contact={contact} slogan={site.slogan} />
     </>
   );
 }

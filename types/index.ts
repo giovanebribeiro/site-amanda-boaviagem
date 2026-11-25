@@ -1,13 +1,11 @@
-export interface Review {
-  author: string;
-  text: string;
-}
-
-export interface BookLink {
-  label: string;
-  url: string;
-  primary?: boolean;
-}
+export type {
+  AboutData,
+  BookLink,
+  ContactData,
+  Review,
+  SiteData,
+} from "@/shared/content-schema";
+import type { BookLink, Review } from "@/shared/content-schema";
 
 export interface Book {
   id: number;
@@ -20,6 +18,7 @@ export interface Book {
   releaseDate: string;
   slogan: string;
   reviews: Review[];
+  toRelease: boolean;
 }
 
 export interface BlogPost {
@@ -28,17 +27,4 @@ export interface BlogPost {
   date: string;
   excerpt: string;
   coverImage?: string;
-}
-
-export interface ContactData {
-  instagram: string;
-  instagramUrl: string;
-  email: string;
-}
-
-export interface AboutData {
-  title: string;
-  body: string;
-  body2: string;
-  image: string;
 }

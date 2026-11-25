@@ -21,6 +21,7 @@ const mockBook: Book = {
   releaseDate: "2021-05-01",
   slogan: "A test slogan.",
   reviews: [{ author: "Reviewer A", text: "Great book!" }],
+  toRelease: false,
 };
 
 describe("BookCover", () => {

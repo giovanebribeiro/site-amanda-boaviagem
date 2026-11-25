@@ -25,7 +25,11 @@ const NAV_LINKS: NavLink[] = [
   { label: "Contato", href: "/#contato" },
 ];
 
-export default function Header() {
+interface HeaderProps {
+  slogan: string;
+}
+
+export default function Header({ slogan }: HeaderProps) {
   const { pathname } = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -56,7 +60,7 @@ export default function Header() {
               Amanda Boaviagem
             </span>
             <span className="text-xs text-foreground/60 font-sans hidden sm:block">
-              Escritora da Esperança
+              {slogan}
             </span>
           </Link>
         </NavbarBrand>

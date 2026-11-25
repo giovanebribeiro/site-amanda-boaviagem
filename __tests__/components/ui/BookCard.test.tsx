@@ -24,6 +24,7 @@ const baseBook: Book = {
   releaseDate: "2021-05-01",
   slogan: "A test slogan.",
   reviews: [],
+  toRelease: false,
 };
 
 describe("BookCard", () => {
@@ -70,6 +71,11 @@ describe("BookCard", () => {
 
   it("renders no buttons when links is empty", () => {
     render(<BookCard book={{ ...baseBook, links: [] }} />);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
+
+  it("renders no buy buttons for a book marked toRelease", () => {
+    render(<BookCard book={{ ...baseBook, toRelease: true }} />);
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 });

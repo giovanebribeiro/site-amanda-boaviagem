@@ -1,0 +1,6 @@
+# Content is edited on Windows by the management app; keep LF in the repo
+# and in the working tree so files never show up fully rewritten.
+content/** text eol=lf
+
+# Images are stored untouched, with no end-of-line conversion.
+public/images/** binary

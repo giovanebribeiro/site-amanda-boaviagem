@@ -1,5 +1,5 @@
 ---
-title: Amor nos Tempos de Quarentena - Amanda Boaviagem
+title: Amor nos Tempos de Quarentena
 releaseDate: '2021-05-01'
 slogan: Uma história de amor e resiliência nos tempos da pandemia.
 image: /images/books/book1.png

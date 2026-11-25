@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import Header from "@/components/layout/Header";
+import { siteFixture } from "../../fixtures/site";
 
 jest.mock("next/router", () => ({
   useRouter: () => ({
@@ -31,17 +32,22 @@ jest.mock("@heroui/react", () => ({
 
 describe("Header", () => {
   it("renders without crashing", () => {
-    render(<Header />);
+    render(<Header slogan={siteFixture.slogan} />);
     expect(screen.getByRole("navigation")).toBeInTheDocument();
   });
 
   it("renders the author name as logo", () => {
-    render(<Header />);
+    render(<Header slogan={siteFixture.slogan} />);
     expect(screen.getByText("Amanda Boaviagem")).toBeInTheDocument();
   });
 
+  it("renders the slogan received by props", () => {
+    render(<Header slogan={siteFixture.slogan} />);
+    expect(screen.getByText(siteFixture.slogan)).toBeInTheDocument();
+  });
+
   it('link "Livros" points to #livros anchor', () => {
-    render(<Header />);
+    render(<Header slogan={siteFixture.slogan} />);
     // Links appear in both desktop nav and mobile drawer
     const livrosLinks = screen.getAllByRole("link", { name: /livros/i });
     expect(livrosLinks.length).toBeGreaterThan(0);
@@ -49,14 +55,14 @@ describe("Header", () => {
   });
 
   it('link "Blog" points to /blog route', () => {
-    render(<Header />);
+    render(<Header slogan={siteFixture.slogan} />);
     const blogLinks = screen.getAllByRole("link", { name: /blog/i });
     expect(blogLinks.length).toBeGreaterThan(0);
     expect(blogLinks[0]).toHaveAttribute("href", "/blog");
   });
 
   it("renders theme toggle button", () => {
-    render(<Header />);
+    render(<Header slogan={siteFixture.slogan} />);
     const toggleButtons = screen.getAllByRole("button", { name: /alternar tema/i });
     expect(toggleButtons.length).toBeGreaterThan(0);
   });

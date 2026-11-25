@@ -92,12 +92,10 @@ describe("getBooksSortedByDate", () => {
     expect(slugs).toEqual(
       expect.arrayContaining([
         "amor-nos-tempos-de-quarentena",
-        "amor-nos-tempos-de-quarentena-2a-ed",
         "contronicas-historias-amorfas-de-quarentena",
-        "contronicas-historias-amorfas-de-quarentena-2a-ed",
       ])
     );
-    expect(slugs).toHaveLength(4);
+    expect(slugs).toHaveLength(2);
   });
 });
 
@@ -112,6 +110,12 @@ describe("getBookBySlug", () => {
 
   it("returns null for slugs that try to leave the books folder", () => {
     expect(getBookBySlug("../content-invalid/books/sem-titulo", fixtures)).toBeNull();
+  });
+});
+
+describe("toRelease", () => {
+  it("defaults to false when the frontmatter does not set it", () => {
+    expect(getBookBySlug("livro-novo", fixtures)?.toRelease).toBe(false);
   });
 });
 
