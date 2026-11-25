@@ -19,7 +19,20 @@ describe("parseBookFrontmatter", () => {
       slogan: "",
       links: [],
       reviews: [],
+      toRelease: false,
     });
+  });
+
+  it("accepts toRelease as a boolean", () => {
+    expect(
+      parseBookFrontmatter({ ...valid, toRelease: true }, "x.md").toRelease,
+    ).toBe(true);
+  });
+
+  it.each(["yes", 1, null])("rejects toRelease %p that is not a boolean", (value) => {
+    expect(() =>
+      parseBookFrontmatter({ ...valid, toRelease: value }, "x.md"),
+    ).toThrow(/Invalid book \(x\.md\).*toRelease must be a boolean/);
   });
 
   it("accepts a Date from unquoted YAML and normalizes it to ISO", () => {
@@ -126,6 +139,7 @@ describe("parseSite", () => {
     heroPhotoAlt: "a",
     aboutPhotoAlt: "a2",
     latestReleaseTitle: "l",
+    nextReleaseTitle: "n",
     booksTitle: "bt",
     booksSubtitle: "bs",
     blogTitle: "gt",

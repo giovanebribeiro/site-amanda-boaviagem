@@ -35,6 +35,7 @@ export const FIELD_LABELS: Record<
     heroPhotoAlt: { label: "Descrição da foto da página inicial" },
     aboutPhotoAlt: { label: "Descrição da foto do Sobre" },
     latestReleaseTitle: { label: "Título do último lançamento" },
+    nextReleaseTitle: { label: "Título do próximo lançamento" },
     booksTitle: { label: "Título da seção Livros" },
     booksSubtitle: { label: "Subtítulo da seção Livros", multiline: true },
     blogTitle: { label: "Título da seção Blog" },

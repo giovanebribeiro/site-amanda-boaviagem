@@ -24,6 +24,7 @@ const validBook: BookEntry = {
     slogan: "",
     links: [],
     reviews: [],
+    toRelease: false,
     synopsis: "Sinopse A.",
   },
 };
@@ -177,6 +178,25 @@ describe("App: editing a book", () => {
     ...overrides,
   });
 
+  it("marks a book as próximo lançamento and saves the flag", async () => {
+    const api = stubApi({
+      openRepository: vi.fn().mockResolvedValue(opened([validBook])),
+      saveBook: vi.fn().mockResolvedValue(saved()),
+    });
+    render(<App />);
+    await openFolder();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /editar livro a/i }),
+    );
+    await userEvent.click(screen.getByLabelText(/próximo lançamento/i));
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(api.saveBook).toHaveBeenCalledWith(
+      expect.objectContaining({ slug: "livro-a", toRelease: true }),
+    );
+  });
+
   it("edits an existing book keeping its slug and confirms the saved version", async () => {
     const api = stubApi({
       openRepository: vi.fn().mockResolvedValue(opened([validBook])),
@@ -269,6 +289,7 @@ describe("App: editing a book", () => {
               slogan: "",
               links: [],
               reviews: [],
+              toRelease: false,
               synopsis: "",
             },
           },

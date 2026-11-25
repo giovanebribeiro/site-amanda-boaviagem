@@ -77,6 +77,7 @@ describe("serializeBook", () => {
       slogan: "um slogan",
       links: completeDraft.links,
       reviews: completeDraft.reviews,
+      toRelease: false,
     });
     expect(content.trim()).toBe("Sinopse.");
   });
@@ -89,6 +90,12 @@ describe("serializeBook", () => {
       reviews: [],
     });
     expect(source).not.toMatch(/slogan|links|reviews/);
+  });
+
+  it("writes toRelease only when it is true", () => {
+    expect(serializeBook(completeDraft)).not.toMatch(/toRelease/);
+    const { data } = matter(serializeBook({ ...completeDraft, toRelease: true }));
+    expect(data.toRelease).toBe(true);
   });
 
   it("normalizes CRLF typed in the form to LF", () => {
@@ -107,6 +114,7 @@ describe("isBookDraft", () => {
     expect(isBookDraft(completeDraft)).toBe(true);
     expect(isBookDraft({ ...completeDraft, links: undefined })).toBe(false);
     expect(isBookDraft({ ...completeDraft, title: 1 })).toBe(false);
+    expect(isBookDraft({ ...completeDraft, toRelease: "yes" })).toBe(false);
     expect(isBookDraft({ ...completeDraft, links: [{ label: "x" }] })).toBe(
       false,
     );

@@ -113,6 +113,12 @@ describe("getBookBySlug", () => {
   });
 });
 
+describe("toRelease", () => {
+  it("defaults to false when the frontmatter does not set it", () => {
+    expect(getBookBySlug("livro-novo", fixtures)?.toRelease).toBe(false);
+  });
+});
+
 describe("getLatestBook", () => {
   it("returns the most recent book", () => {
     expect(getLatestBook(fixtures)?.slug).toBe("livro-novo");

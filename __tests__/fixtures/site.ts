@@ -6,6 +6,7 @@ export const siteFixture: SiteData = {
   heroPhotoAlt: "Foto de teste do Hero",
   aboutPhotoAlt: "Foto de teste do Sobre",
   latestReleaseTitle: "Lançamento de Teste",
+  nextReleaseTitle: "Próximo Lançamento de Teste",
   booksTitle: "Livros de Teste",
   booksSubtitle: "Subtítulo de livros de teste.",
   blogTitle: "Blog de Teste",

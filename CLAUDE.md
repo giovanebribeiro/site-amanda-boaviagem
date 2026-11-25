@@ -37,7 +37,7 @@ content/
   books/<slug>.md   one Book per file (slug = file name = URL /livros/<slug>)
   about.json        { title, body, body2, image }
   site.json         { slogan, heroWelcome, heroPhotoAlt, aboutPhotoAlt, latestReleaseTitle,
-                      booksTitle, booksSubtitle, blogTitle, blogSubtitle, contactTitle, contactSubtitle }
+                      nextReleaseTitle, booksTitle, booksSubtitle, blogTitle, blogSubtitle, contactTitle, contactSubtitle }
   contact.json      { instagram, instagramUrl, email }
   blog/             MDX posts
 ```
@@ -50,6 +50,7 @@ title: "..."              # required
 releaseDate: "2021-05-01" # required, quoted ISO YYYY-MM-DD
 image: "/images/books/x.png" # required, cover under public/images/books/
 slogan: "..."             # optional
+toRelease: true           # optional boolean, default false (Próximo lançamento)
 links:                    # optional, default []
   - { label: "Amazon", url: "https://...", primary: true }
 reviews:                  # optional, default []
@@ -67,6 +68,8 @@ Readers (`lib/books.ts`, `lib/about.ts`, `lib/contact.ts`, `lib/site.ts`, shared
 `getStaticProps` reads content and passes it down as props: `pages/index.tsx` gives `books` to `UltimoLancamento` (first item) and `Books`, `about` to `About`, `contact` to `Contact` and `Footer`, `site` (the "Textos do site") to `Hero`, `Books`, `UltimoLancamento`, `About`, `Contact`, and `site.slogan` to `Header` and `Footer`. `pages/livros/[slug].tsx` passes `book`, `contact` and `site`. Components never touch the disk, so tests pass data directly. Any page that renders `Header` or `Footer` must fetch `contact` and `site` in its own `getStaticProps`. UI labels, navigation and aria-labels stay in code; only editorial text goes in `site.json`.
 
 Line endings: `.gitattributes` forces LF for `content/**` and leaves `public/images/**` untouched (binary). Any tool that writes content (e.g. the management app) must write LF.
+
+`toRelease: true` marks a Próximo lançamento: the home highlight uses `nextReleaseTitle` instead of `latestReleaseTitle`, and no buy links show (home, `/livros/<slug>` and the books grid). A flagged book wins the highlight even if it is not the newest; with several flagged, the soonest `releaseDate` wins (`lib/featured-book.ts`). A future `releaseDate` still shows the countdown; once it passes, the flag keeps the links hidden and `getStaticProps` logs a build warning until the flag is removed.
 
 To add a book: create `content/books/<slug>.md` and put the cover in `public/images/books/`. No code change.
 

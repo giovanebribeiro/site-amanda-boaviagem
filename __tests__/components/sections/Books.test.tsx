@@ -22,6 +22,7 @@ const makeBook = (id: number): Book => ({
   releaseDate: "2022-01-01",
   slogan: "Slogan",
   reviews: [],
+  toRelease: false,
 });
 
 const books = [makeBook(1), makeBook(2), makeBook(3)];

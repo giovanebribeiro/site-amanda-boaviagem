@@ -51,6 +51,34 @@ describe("openContentSession", () => {
     });
   });
 
+  it("reads toRelease from a book, defaulting to false", () => {
+    writeBook("livro-a", VALID_BOOK);
+    writeBook("livro-b", VALID_BOOK.replace("slogan:", "toRelease: true\nslogan:"));
+
+    const flags = Object.fromEntries(
+      openContentSession(repo)
+        .listBooks()
+        .map((entry) => [
+          entry.slug,
+          entry.status === "valid" ? entry.book.toRelease : undefined,
+        ]),
+    );
+
+    expect(flags).toEqual({ "livro-a": false, "livro-b": true });
+  });
+
+  it("flags a book whose toRelease is not a boolean as invalid", () => {
+    writeBook("livro-a", VALID_BOOK.replace("slogan:", 'toRelease: "yes"\nslogan:'));
+
+    const [entry] = openContentSession(repo).listBooks();
+
+    expect(entry).toMatchObject({
+      status: "invalid",
+      error: expect.stringContaining("toRelease must be a boolean"),
+      draft: { toRelease: false },
+    });
+  });
+
   it("sorts books newest first", () => {
     writeBook("antigo", VALID_BOOK.replace("2021-05-01", "2019-01-01"));
     writeBook("novo", VALID_BOOK.replace("2021-05-01", "2024-01-01"));

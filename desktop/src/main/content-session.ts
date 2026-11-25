@@ -147,6 +147,7 @@ function toDraft(
       author: text(review?.author),
       text: text(review?.text),
     })),
+    toRelease: data.toRelease === true,
     synopsis: body.trim(),
   };
 }

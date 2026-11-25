@@ -71,6 +71,7 @@ const mockBook: Book = {
     { author: "Leitora G", text: "Reli na segunda edição e me emocionei ainda mais." },
     { author: "Leitora H", text: "Uma obra atemporal." },
   ],
+  toRelease: false,
 };
 
 describe("BookPage", () => {

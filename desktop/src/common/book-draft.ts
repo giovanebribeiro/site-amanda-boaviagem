@@ -14,6 +14,7 @@ export function emptyDraft(): BookDraft {
     slogan: "",
     links: [],
     reviews: [],
+    toRelease: false,
     synopsis: "",
   };
 }
@@ -71,6 +72,7 @@ export function isBookDraft(value: unknown): value is BookDraft {
   const draft = value as Record<string, unknown>;
   return (
     (draft.slug === null || isString(draft.slug)) &&
+    typeof draft.toRelease === "boolean" &&
     ["title", "releaseDate", "image", "slogan", "synopsis"].every((key) =>
       isString(draft[key]),
     ) &&
@@ -113,6 +115,7 @@ export function serializeBook(draft: BookDraft): string {
     releaseDate: draft.releaseDate,
     image: draft.image,
     ...(draft.slogan ? { slogan: toLf(draft.slogan) } : {}),
+    ...(draft.toRelease ? { toRelease: true } : {}),
     ...(draft.links.length > 0
       ? {
           links: draft.links.map(({ primary, ...link }) =>

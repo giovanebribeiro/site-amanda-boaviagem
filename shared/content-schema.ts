@@ -21,6 +21,8 @@ export interface BookFrontmatter {
   slogan: string;
   links: BookLink[];
   reviews: Review[];
+  /** "Próximo lançamento": the book is not launched yet, so it shows no buy links. */
+  toRelease: boolean;
 }
 
 export interface PostFrontmatter {
@@ -51,6 +53,7 @@ export interface SiteData {
   heroPhotoAlt: string;
   aboutPhotoAlt: string;
   latestReleaseTitle: string;
+  nextReleaseTitle: string;
   booksTitle: string;
   booksSubtitle: string;
   blogTitle: string;
@@ -69,6 +72,7 @@ const SITE_FIELDS = [
   "heroPhotoAlt",
   "aboutPhotoAlt",
   "latestReleaseTitle",
+  "nextReleaseTitle",
   "booksTitle",
   "booksSubtitle",
   "blogTitle",
@@ -152,6 +156,10 @@ export function parseBookFrontmatter(
     );
   }
 
+  if (data.toRelease !== undefined && typeof data.toRelease !== "boolean") {
+    throw invalidBook(fileName, "toRelease must be a boolean");
+  }
+
   return {
     title: String(data.title),
     releaseDate,
@@ -164,6 +172,7 @@ export function parseBookFrontmatter(
       ["author", "text"],
       "reviews",
     ),
+    toRelease: data.toRelease ?? false,
   };
 }
 

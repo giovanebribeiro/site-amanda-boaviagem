@@ -110,6 +110,14 @@ export function BookForm({
           onChange={(event) => update({ releaseDate: event.target.value })}
         />
       </label>
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={draft.toRelease}
+          onChange={(event) => update({ toRelease: event.target.checked })}
+        />
+        Próximo lançamento (ainda não lançado, sem botão de compra)
+      </label>
       <label className="block">
         Capa
         <select

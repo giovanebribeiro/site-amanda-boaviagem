@@ -61,6 +61,7 @@ export default function BookPage({
               <Countdown
                 releaseDate={book.releaseDate}
                 links={book.links}
+                showLinks={!book.toRelease}
               />
             </div>
           </div>

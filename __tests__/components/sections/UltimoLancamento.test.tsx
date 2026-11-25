@@ -22,6 +22,7 @@ const book: Book = {
   releaseDate: "2022-06-01",
   slogan: "A edição definitiva de um romance que emocionou o Brasil.",
   reviews: [],
+  toRelease: false,
 };
 
 describe("UltimoLancamento", () => {
@@ -68,6 +69,28 @@ describe("UltimoLancamento", () => {
       render(<UltimoLancamento book={book} site={siteFixture} />);
     });
     expect(screen.getByText(siteFixture.latestReleaseTitle)).toBeInTheDocument();
+  });
+
+  it("uses the next release title and no buy buttons for a book marked toRelease", async () => {
+    await act(async () => {
+      render(
+        <UltimoLancamento
+          book={{ ...book, toRelease: true, releaseDate: "2020-01-01" }}
+          site={siteFixture}
+        />
+      );
+    });
+    expect(screen.getByText(siteFixture.nextReleaseTitle)).toBeInTheDocument();
+    expect(screen.queryByText(siteFixture.latestReleaseTitle)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Uiclap" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the latest release title and buy buttons for a released book", async () => {
+    await act(async () => {
+      render(<UltimoLancamento book={book} site={siteFixture} />);
+    });
+    expect(screen.queryByText(siteFixture.nextReleaseTitle)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Uiclap" })).toBeInTheDocument();
   });
 
   it("renders nothing when there is no book", async () => {

@@ -16,6 +16,8 @@ export interface BookDraft {
   slogan: string;
   links: BookLink[];
   reviews: Review[];
+  /** "Próximo lançamento": not launched yet, so the site shows no buy links. */
+  toRelease: boolean;
   synopsis: string;
 }
 

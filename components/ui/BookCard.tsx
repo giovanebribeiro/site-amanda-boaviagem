@@ -6,7 +6,7 @@ interface BookCardProps {
 }
 
 export default function BookCard({ book }: BookCardProps) {
-  const { title, description, image, links } = book;
+  const { title, description, image, links, toRelease } = book;
 
   return (
     <article className="flex flex-col bg-background rounded-2xl shadow-md overflow-hidden border border-foreground/10 hover:shadow-lg transition-shadow">
@@ -29,24 +29,26 @@ export default function BookCard({ book }: BookCardProps) {
           {description}
         </p>
 
-        {/* Botões de compra */}
-        <div className="flex flex-wrap gap-3 pt-2">
-          {links.map(({ label, url, primary }) => (
-            <a
-              key={`${label}-${url}`}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={
-                primary
-                  ? "flex-1 text-center font-sans text-sm font-medium px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
-                  : "flex-1 text-center font-sans text-sm font-medium px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
-              }
-            >
-              {label}
-            </a>
-          ))}
-        </div>
+        {/* Botões de compra: ocultos em um próximo lançamento */}
+        {!toRelease && (
+          <div className="flex flex-wrap gap-3 pt-2">
+            {links.map(({ label, url, primary }) => (
+              <a
+                key={`${label}-${url}`}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={
+                  primary
+                    ? "flex-1 text-center font-sans text-sm font-medium px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                    : "flex-1 text-center font-sans text-sm font-medium px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
+                }
+              >
+                {label}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </article>
   );

@@ -71,4 +71,18 @@ describe("Countdown", () => {
     expect(screen.queryAllByRole("link")).toHaveLength(0);
     expect(screen.getByText(/dias/i)).toBeInTheDocument();
   });
+
+  it("hides the buy buttons when showLinks is false, even after the release date", async () => {
+    await act(async () => {
+      render(<Countdown releaseDate={PAST_DATE} links={LINKS} showLinks={false} />);
+    });
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
+
+  it("still shows the countdown when showLinks is false and the date is in the future", async () => {
+    await act(async () => {
+      render(<Countdown releaseDate={FUTURE_DATE} links={LINKS} showLinks={false} />);
+    });
+    expect(screen.getByText(/dias/i)).toBeInTheDocument();
+  });
 });

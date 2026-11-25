@@ -15,7 +15,7 @@ export default function UltimoLancamento({ book, site }: UltimoLancamentoProps) 
     <section className="py-20 px-4 bg-foreground/[0.03] border-b border-foreground/10">
       <div className="max-w-6xl mx-auto">
         <p className="font-sans text-xs uppercase tracking-widest text-primary text-center mb-12">
-          {site.latestReleaseTitle}
+          {book.toRelease ? site.nextReleaseTitle : site.latestReleaseTitle}
         </p>
 
         <div className="flex flex-col md:flex-row items-center gap-12">
@@ -52,6 +52,7 @@ export default function UltimoLancamento({ book, site }: UltimoLancamentoProps) 
               <Countdown
                 releaseDate={book.releaseDate}
                 links={book.links}
+                showLinks={!book.toRelease}
               />
             </div>
 

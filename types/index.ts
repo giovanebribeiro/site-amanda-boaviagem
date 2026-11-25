@@ -18,6 +18,7 @@ export interface Book {
   releaseDate: string;
   slogan: string;
   reviews: Review[];
+  toRelease: boolean;
 }
 
 export interface BlogPost {

@@ -12,6 +12,8 @@ interface TimeLeft {
 interface CountdownProps {
   releaseDate: string;
   links?: BookLink[];
+  /** False for a próximo lançamento: never offer purchase, even after the date. */
+  showLinks?: boolean;
 }
 
 function computeTimeLeft(diffMs: number): TimeLeft {
@@ -34,6 +36,7 @@ function pad(n: number): string {
 export default function Countdown({
   releaseDate,
   links = [],
+  showLinks = true,
 }: CountdownProps) {
   const [mounted, setMounted] = useState(false);
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null);
@@ -62,6 +65,7 @@ export default function Countdown({
 
   // Data no passado: exibe links de compra
   if (timeLeft === null) {
+    if (!showLinks) return null;
     return (
       <div className="flex flex-wrap gap-4">
         {links.map(({ label, url, primary }) => (
